@@ -1,12 +1,26 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 function calculateMaintenanceFee(pricePerSlot, totalSlots) {
   const totalValue = pricePerSlot * totalSlots;
   if (totalValue > 1500) return 50;
   if (totalValue >= 601) return 40;
   return 30;
+}
+
+function LoadingOverlay({ message }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4">
+      <div className="flex flex-col items-center gap-3 rounded-[2rem] bg-white p-8 shadow-2xl ring-1 ring-slate-200">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <p className="text-sm font-semibold text-slate-950">
+          {message || "Loading..."}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function Host() {
@@ -303,15 +317,7 @@ export default function Host() {
   };
 
   if (authLoading) {
-    return (
-      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm text-center">
-          <p className="text-sm text-slate-600">
-            Checking your sign-in status…
-          </p>
-        </div>
-      </main>
-    );
+    return <LoadingSpinner message="Checking your sign-in status…" />;
   }
 
   if (!session) {
@@ -338,9 +344,28 @@ export default function Host() {
     );
   }
 
+  if (
+    managementLoading &&
+    myFamilies.length === 0 &&
+    joinedFamilies.length === 0
+  ) {
+    return <LoadingSpinner message="Loading your host dashboard…" />;
+  }
+
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+      {loading && <LoadingOverlay message={status || "Processing…"} />}
       <div className="mx-auto max-w-3xl space-y-8">
+        <div className="flex items-center justify-between gap-4">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-slate-100"
+          >
+            ← Back
+          </button>
+        </div>
+
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-sm uppercase tracking-[0.3em] text-emerald-700">
             Host a family
