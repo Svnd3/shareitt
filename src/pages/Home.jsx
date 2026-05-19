@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, hasSupabaseConfig } from "../lib/supabaseClient";
 import ServiceCard from "../components/ServiceCard";
 import FAQ from "../components/FAQ";
 import QuickPairing from "../components/QuickPairing";
@@ -61,7 +61,8 @@ export default function Home({ session, authLoading }) {
       if (error || !data) {
         console.error("Home fetch families error:", error);
         setFetchError(
-          error?.message || "Unable to load families from Supabase.",
+          error?.message ||
+            "Unable to load families from Supabase. Please check your environment and RLS policies.",
         );
         setFamilies([]);
         setLoading(false);
@@ -151,6 +152,13 @@ export default function Home({ session, authLoading }) {
           </nav>
         </header>
 
+        {!hasSupabaseConfig && (
+          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 shadow-sm">
+            Supabase environment variables are not configured. Please set
+            VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your local .env or
+            Vercel environment settings.
+          </div>
+        )}
         {notice && (
           <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-sm">
             {notice}

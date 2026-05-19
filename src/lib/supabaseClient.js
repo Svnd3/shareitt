@@ -20,13 +20,14 @@ function makeMockBuilder() {
 }
 
 let supabase;
+const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  // Provide a safe mock so importing this file doesn't crash the app when env is missing.
-  // Components will fall back to `defaultFamilies` when Supabase responses are empty.
+if (!hasSupabaseConfig) {
+  // Provide a safe mock so importing this file doesn't not crash the app when env is missing.
+  // Show a visible error in the UI instead of silently rendering empty data.
   // eslint-disable-next-line no-console
-  console.warn(
-    "VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY not set — using fallback mock supabase. Add .env to enable live Supabase connection.",
+  console.error(
+    "VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY not set. Add these variables to .env or Vercel environment settings.",
   );
 
   supabase = {
@@ -47,4 +48,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
   supabase = createClient(supabaseUrl, supabaseAnonKey);
 }
 
-export { supabase };
+export { supabase, hasSupabaseConfig };
