@@ -1,0 +1,309 @@
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
+import { defaultFamilies } from "../data/defaultFamilies";
+import LoadingSpinner from "../components/LoadingSpinner";
+
+export default function Join() {
+  const { familyId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [family, setFamily] = useState(null);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFamily = async () => {
+      const { data, error } = await supabase
+        .from("families")
+        .select("*")
+        .eq("id", familyId)
+        .single();
+
+      if (error || !data) {
+        const fallback = defaultFamilies.find((item) => item.id === familyId);
+        setFamily(fallback || null);
+        return;
+      }
+
+      setFamily(data);
+    };
+
+    loadFamily();
+  }, [familyId]);
+
+  useEffect(() => {
+    const loadSession = async () => {
+      if (!supabase.auth?.getSession) {
+        setAuthLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        setAuthLoading(false);
+        return;
+      }
+
+      setSession(data?.session ?? null);
+      setAuthLoading(false);
+    };
+
+    loadSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      },
+    );
+
+    return () => authListener?.subscription?.unsubscribe?.();
+  }, []);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (phoneError) {
+      setStatus("Enter a valid Kenyan number e.g. 0712345678.");
+      return;
+    }
+    if (!name.trim() || !phone.trim()) {
+      setStatus("Please enter your full name and phone number.");
+      return;
+    }
+    if (!family) {
+      setStatus("Unable to load family details.");
+      return;
+    }
+    if (family.created_by === session?.user?.id) {
+      setStatus("You cannot join your own family.");
+      return;
+    }
+    if (family.filled_slots >= family.total_slots) {
+      setStatus("This family is already full.");
+      return;
+    }
+
+    setLoading(true);
+    setStatus("Sending your request...");
+
+    const { error: insertError } = await supabase.from("members").insert({
+      family_id: family.id,
+      user_id: session?.user?.id,
+      name,
+      phone,
+      email: email.trim() || session?.user?.email || null,
+    });
+
+    if (insertError) {
+      setStatus("Could not submit your join request. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    await supabase
+      .from("families")
+      .update({ filled_slots: family.filled_slots + 1 })
+      .eq("id", family.id);
+
+    const message = `Hi ShareIt! I just requested to join ${family.service_name} hosted by ${family.host_name}. My name is ${name}. phone ${phone}. Please confirm my request.`;
+    window.open(
+      `https://wa.me/254741401230?text=${encodeURIComponent(message)}`,
+      "_blank",
+    );
+    setStatus(
+      "Request sent! Open WhatsApp to confirm your request and connect with the host.",
+    );
+    setLoading(false);
+    setName("");
+    setPhone("");
+    setEmail("");
+    setTimeout(() => navigate("/"), 2000);
+  };
+
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
+          <LoadingSpinner message="Checking your account…" />
+        </div>
+      </main>
+    );
+  }
+
+  if (!session) {
+    return (
+      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
+          <h1 className="text-2xl font-semibold text-slate-950">
+            Sign in to join
+          </h1>
+          <p className="mt-4 text-slate-600">
+            You need to sign in or sign up before joining a family.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <Link
+              to="/auth"
+              state={{ from: location.pathname }}
+              className="rounded-full bg-[#1A7A3C] px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+            >
+              Sign in / Sign up
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!family) {
+    return (
+      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <h1 className="text-2xl font-semibold text-slate-950">
+            Family not found
+          </h1>
+          <p className="mt-4 text-slate-600">
+            Please return to the homepage and choose an active family.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  const slotsLeft = family.total_slots - family.filled_slots;
+
+  return (
+    <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl space-y-8">
+        <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.3em] text-emerald-700">
+                Join a family
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold text-slate-950">
+                {family.service_name}
+              </h1>
+            </div>
+            <div className="rounded-3xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              {slotsLeft <= 0
+                ? "Full family"
+                : `${slotsLeft} slot${slotsLeft === 1 ? "" : "s"} left`}
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-3xl bg-[#F1F8F4] p-5">
+              <p className="text-sm text-slate-600">Host</p>
+              <p className="mt-2 text-lg font-semibold text-slate-950">
+                {family.host_name}
+              </p>
+            </div>
+            <div className="rounded-3xl bg-[#F1F8F4] p-5">
+              <p className="text-sm text-slate-600">Price per slot</p>
+              <p className="mt-2 text-lg font-semibold text-slate-950">
+                KSh {family.price_per_slot}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-3xl bg-[#FEF3C7] p-5">
+              <p className="text-sm text-slate-600">Verification</p>
+              <p className="mt-2 text-lg font-semibold text-slate-950">
+                {family.is_verified ? "Verified" : "Pending"}
+              </p>
+            </div>
+            <div className="rounded-3xl bg-[#E8F5FF] p-5">
+              <p className="text-sm text-slate-600">Total slots</p>
+              <p className="mt-2 text-lg font-semibold text-slate-950">
+                {family.total_slots}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+          <h2 className="text-2xl font-semibold text-slate-950">
+            Request to join
+          </h2>
+          {family.created_by === session?.user?.id ? (
+            <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-700">
+              You are the host of this family. You cannot join your own family.
+              Manage it from the host dashboard instead.
+            </div>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-slate-600">
+                Submit your details and open WhatsApp to request membership.
+              </p>
+
+              <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="space-y-2 text-sm text-slate-700">
+                    Full Name
+                    <input
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      type="text"
+                      placeholder="Jane Doe"
+                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                    />
+                  </label>
+                  <label className="space-y-2 text-sm text-slate-700">
+                    Phone Number
+                    <input
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
+                      onBlur={() => {
+                        const cleaned = phone.trim();
+                        const valid = /^(\+2547|07|2547)\d{8}$/.test(cleaned);
+                        setPhoneError(
+                          cleaned && !valid
+                            ? "Enter a valid Kenyan number e.g. 0712345678"
+                            : "",
+                        );
+                      }}
+                      type="tel"
+                      placeholder="+2547..."
+                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                    />
+                    {phoneError && (
+                      <p className="text-xs text-red-500 mt-1">{phoneError}</p>
+                    )}
+                  </label>
+                </div>
+                <label className="space-y-2 text-sm text-slate-700">
+                  Email (optional)
+                  <input
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    type="email"
+                    placeholder="you@example.com"
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </label>
+
+                <div className="space-y-3">
+                  <button
+                    type="submit"
+                    disabled={loading || slotsLeft <= 0}
+                    className="inline-flex w-full items-center justify-center rounded-full bg-[#1A7A3C] px-6 py-4 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {loading ? "Processing…" : "Request to join"}
+                  </button>
+                  {status && <p className="text-sm text-slate-700">{status}</p>}
+                </div>
+              </form>
+            </>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
