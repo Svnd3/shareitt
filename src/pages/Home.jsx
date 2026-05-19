@@ -35,6 +35,7 @@ export default function Home({ session, authLoading }) {
   const [activeFilter, setActiveFilter] = useState("All");
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -58,12 +59,17 @@ export default function Home({ session, authLoading }) {
         .order("created_at", { ascending: false });
 
       if (error || !data) {
+        console.error("Home fetch families error:", error);
+        setFetchError(
+          error?.message || "Unable to load families from Supabase.",
+        );
         setFamilies([]);
         setLoading(false);
         return;
       }
 
       setFamilies(data);
+      setFetchError("");
       setLoading(false);
     };
 
@@ -148,6 +154,11 @@ export default function Home({ session, authLoading }) {
         {notice && (
           <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-sm">
             {notice}
+          </div>
+        )}
+        {fetchError && (
+          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 shadow-sm">
+            {fetchError}
           </div>
         )}
 
