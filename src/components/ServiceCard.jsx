@@ -98,6 +98,9 @@ export default function ServiceCard({ family }) {
   const hasLogo = Boolean(logoUrl && !logoError);
   const emoji = serviceEmojiMap[family.service_name.split(" ")[0]] ?? "⭐";
   const remainingFunding = slotsLeft * family.price_per_slot;
+  const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
+  const [editingUnique, setEditingUnique] = useState(false);
+  const [savingUnique, setSavingUnique] = useState(false);
   const reportMailto = `mailto:keninnofficial@gmail.com?subject=${encodeURIComponent(
     `Report issue for ${family.service_name}`,
   )}&body=${encodeURIComponent(
@@ -136,6 +139,72 @@ export default function ServiceCard({ family }) {
         <h3 className="text-xl font-semibold text-slate-950">
           {family.service_name}
         </h3>
+        <div className="text-sm text-slate-600">
+          {uniqueName ? (
+            <span className="font-medium text-slate-800">{uniqueName}</span>
+          ) : (
+            <span className="text-slate-500">No family name set</span>
+          )}
+        </div>
+        {isHost && (
+          <div className="mt-2">
+            {editingUnique ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={uniqueName}
+                  onChange={(e) => setUniqueName(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    }
+                    if (e.key === "Escape") {
+                      setUniqueName(family.unique_name ?? "");
+                      setEditingUnique(false);
+                    }
+                  }}
+                  onBlur={async () => {
+                    setEditingUnique(false);
+                    if ((uniqueName ?? "").trim() === (family.unique_name ?? "").trim()) return;
+                    setSavingUnique(true);
+                    try {
+                      const { error } = await supabase
+                        .from("families")
+                        .update({ unique_name: uniqueName.trim() || null })
+                        .eq("id", family.id);
+                      if (error) throw error;
+                    } catch (err) {
+                      console.error("Failed to save unique name", err);
+                      setUniqueName(family.unique_name ?? "");
+                    } finally {
+                      setSavingUnique(false);
+                    }
+                  }}
+                  className="rounded-md border border-slate-200 px-3 py-1 text-sm"
+                  placeholder="Enter unique family name (optional)"
+                />
+                <button
+                  onClick={() => {
+                    setUniqueName(family.unique_name ?? "");
+                    setEditingUnique(false);
+                  }}
+                  className="text-sm text-slate-500"
+                >
+                  Cancel
+                </button>
+                {savingUnique && <span className="text-sm text-slate-500">Saving…</span>}
+              </div>
+            ) : (
+              <div>
+                <button
+                  onClick={() => setEditingUnique(true)}
+                  className="text-sm text-slate-600 underline"
+                >
+                  {uniqueName ? "Edit family name" : "Set family name"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         <p className="text-sm text-slate-600">
           Hosted by{" "}
           <span className="font-medium text-slate-900">{family.host_name}</span>
