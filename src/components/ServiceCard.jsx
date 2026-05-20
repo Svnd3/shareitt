@@ -95,7 +95,14 @@ export default function ServiceCard({ family }) {
       ? "bg-red-100 text-red-800"
       : "bg-emerald-100 text-emerald-900";
   const primaryLogo = getBrandLogo(family.service_name);
-  const logoUrl = primaryLogo || "/logo.png";
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+
+  useEffect(() => {
+    setLogoLoadFailed(false);
+  }, [family.service_name]);
+
+  const shouldShowFallbackLogo = logoLoadFailed || !primaryLogo;
+  const logoUrl = primaryLogo;
   const logoAlt = primaryLogo ? `${family.service_name} logo` : "ShareIt logo";
   const remainingFunding = slotsLeft * family.price_per_slot;
   const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
@@ -114,17 +121,19 @@ export default function ServiceCard({ family }) {
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-3xl bg-slate-100">
-            <img
-              src={logoUrl}
-              alt={logoAlt}
-              onError={(e) => {
-                if (e.target && e.target.src) {
-                  e.target.src = "/logo.png";
-                }
-              }}
-              className="h-full w-full rounded-full bg-white object-contain p-2"
-            />
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-slate-100">
+            {shouldShowFallbackLogo ? (
+              <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xl">
+                {family.service_name?.[0]?.toUpperCase() || "S"}
+              </div>
+            ) : (
+              <img
+                src={logoUrl}
+                alt={logoAlt}
+                onError={() => setLogoLoadFailed(true)}
+                className="h-full w-full rounded-full bg-white object-contain p-2"
+              />
+            )}
           </div>
         </div>
         <div className="flex flex-col gap-1 text-right text-sm text-slate-500">
