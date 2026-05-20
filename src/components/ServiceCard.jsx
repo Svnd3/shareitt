@@ -4,38 +4,28 @@ import { supabase } from "../lib/supabaseClient";
 import { serviceEmojiMap } from "../data/defaultFamilies";
 
 const brandLogos = {
-  Netflix: "https://logo.clearbit.com/netflix.com",
-  "Netflix Standard": "https://logo.clearbit.com/netflix.com",
-  "Netflix Premium": "https://logo.clearbit.com/netflix.com",
-  "Netflix Basic": "https://logo.clearbit.com/netflix.com",
-  Spotify: "https://logo.clearbit.com/spotify.com",
-  "Spotify Premium": "https://logo.clearbit.com/spotify.com",
-  "YouTube Premium": "https://logo.clearbit.com/youtube.com",
-  "Prime Video": "https://logo.clearbit.com/primevideo.com",
-  "Disney+": "https://logo.clearbit.com/disneyplus.com",
-  "Apple TV+": "https://logo.clearbit.com/apple.com",
-  Deezer: "https://logo.clearbit.com/deezer.com",
-  Tidal: "https://logo.clearbit.com/tidal.com",
-  Showmax: "https://logo.clearbit.com/showmax.com",
-  "Canva Pro": "https://logo.clearbit.com/canva.com",
-  "Adobe Creative Cloud": "https://logo.clearbit.com/adobe.com",
-  Notion: "https://logo.clearbit.com/notion.com",
-  Figma: "https://logo.clearbit.com/figma.com",
-  Dropbox: "https://logo.clearbit.com/dropbox.com",
-  "Google One": "https://logo.clearbit.com/google.com",
-  "Microsoft 365": "https://logo.clearbit.com/microsoft.com",
-  "ChatGPT Plus": "https://logo.clearbit.com/openai.com",
-  "Claude Pro": "https://logo.clearbit.com/anthropic.com",
-  Midjourney: "https://logo.clearbit.com/midjourney.com",
-  "Gemini Advanced": "https://logo.clearbit.com/google.com",
-  "Copilot Pro": "https://logo.clearbit.com/microsoft.com",
-  "Xbox Game Pass": "https://logo.clearbit.com/xbox.com",
-  "PlayStation Plus": "https://logo.clearbit.com/playstation.com",
-  "EA Play": "https://logo.clearbit.com/ea.com",
-  "Duolingo Plus": "https://logo.clearbit.com/duolingo.com",
-  Coursera: "https://logo.clearbit.com/coursera.org",
-  "LinkedIn Premium": "https://logo.clearbit.com/linkedin.com",
-  Calm: "https://logo.clearbit.com/calm.com",
+  "netflix standard": "https://logo.clearbit.com/netflix.com",
+  "netflix basic": "https://logo.clearbit.com/netflix.com",
+  "spotify premium": "https://logo.clearbit.com/spotify.com",
+  "chatgpt plus": "https://logo.clearbit.com/openai.com",
+  "claude pro": "https://logo.clearbit.com/anthropic.com",
+  "canva pro": "https://logo.clearbit.com/canva.com",
+  "youtube premium": "https://logo.clearbit.com/youtube.com",
+  "prime video": "https://logo.clearbit.com/amazon.com",
+  "disney+": "https://logo.clearbit.com/disneyplus.com",
+  "apple tv+": "https://logo.clearbit.com/apple.com",
+  "microsoft 365": "https://logo.clearbit.com/microsoft.com",
+  "google one": "https://logo.clearbit.com/google.com",
+  "notion": "https://logo.clearbit.com/notion.so",
+  "figma": "https://logo.clearbit.com/figma.com",
+  "dropbox": "https://logo.clearbit.com/dropbox.com",
+  "adobe creative cloud": "https://logo.clearbit.com/adobe.com",
+  "duolingo plus": "https://logo.clearbit.com/duolingo.com",
+  "linkedin premium": "https://logo.clearbit.com/linkedin.com",
+  "showmax": "https://logo.clearbit.com/showmax.com",
+  "deezer": "https://logo.clearbit.com/deezer.com",
+  "xbox game pass": "https://logo.clearbit.com/xbox.com",
+  "playstation plus": "https://logo.clearbit.com/playstation.com",
 };
 
 export default function ServiceCard({ family }) {
@@ -84,19 +74,23 @@ export default function ServiceCard({ family }) {
       mounted = false;
     };
   }, [family.id, family.created_by]);
-  const [logoError, setLogoError] = useState(false);
-  useEffect(() => {
-    setLogoError(false);
-  }, [family.service_name]);
 
   const slotsLeft = family.total_slots - family.filled_slots;
   const slotBadge =
     slotsLeft <= 1
       ? "bg-red-100 text-red-800"
       : "bg-emerald-100 text-emerald-900";
-  const logoUrl = brandLogos[family.service_name];
-  const hasLogo = Boolean(logoUrl && !logoError);
-  const emoji = serviceEmojiMap[family.service_name.split(" ")[0]] ?? "⭐";
+  const logoKey = family.service_name?.trim().toLowerCase() ?? "";
+  const primaryLogo = brandLogos[logoKey];
+  const fallbackLogo = "/logo.png";
+  const [useFallbackLogo, setUseFallbackLogo] = useState(false);
+
+  useEffect(() => {
+    setUseFallbackLogo(false);
+  }, [family.service_name]);
+
+  const logoUrl = useFallbackLogo ? fallbackLogo : primaryLogo || fallbackLogo;
+  const logoAlt = primaryLogo ? `${family.service_name} logo` : "ShareIt logo";
   const remainingFunding = slotsLeft * family.price_per_slot;
   const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
   const safeUniqueName = uniqueName ?? "";
@@ -115,18 +109,14 @@ export default function ServiceCard({ family }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-3xl bg-slate-100">
-            {hasLogo ? (
-              <img
-                src={logoUrl}
-                alt={`${family.service_name} logo`}
-                onError={() => setLogoError(true)}
-                className="h-full w-full object-contain p-2"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-slate-100 text-xl text-slate-600">
-                <span>⭐</span>
-              </div>
-            )}
+            <img
+              src={logoUrl}
+              alt={logoAlt}
+              onError={() => {
+                if (!useFallbackLogo) setUseFallbackLogo(true);
+              }}
+              className="h-full w-full rounded-full bg-white object-contain p-2"
+            />
           </div>
         </div>
         <div className="flex flex-col gap-1 text-right text-sm text-slate-500">
