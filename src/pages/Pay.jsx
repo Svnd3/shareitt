@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { sendPaymentConfirmationEmail } from "../lib/sendEmail";
 import PaymentSpinner from "../components/PaymentSpinner";
 
 export default function Pay() {
@@ -110,6 +111,18 @@ export default function Pay() {
     if (dbError) {
       setError("Something went wrong. Please try again.");
       return;
+    }
+
+    const userName =
+      user.user_metadata?.full_name || user.email || "ShareIt member";
+    if (user.email) {
+      sendPaymentConfirmationEmail({
+        email: user.email,
+        memberName: userName,
+        amount: 90,
+      }).catch((error) => {
+        console.error("Payment confirmation email failed:", error);
+      });
     }
 
     navigate("/");

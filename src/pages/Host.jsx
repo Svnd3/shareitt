@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import {
+  sendHostRegistrationEmail,
+  sendMemberRemovedEmail,
+  sendPaymentReminderEmail,
+} from "../lib/sendEmail";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 function calculateMaintenanceFee(pricePerSlot, totalSlots) {
@@ -186,9 +191,41 @@ export default function Host() {
     setLoading(false);
   };
 
+  const handleShareHostPage = async () => {
+    setStatus("Preparing share message...");
+    setLoading(true);
+
+    const shareText =
+      "I’m hosting family subscription listings on ShareIt Kenya. Join live families, pay a KSh 90 reliability fee, and connect through WhatsApp to save on services together. ";
+    const shareUrl = window.location.origin + "/host";
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Host families on ShareIt",
+          text: `${shareText}${shareUrl}`,
+          url: shareUrl,
+        });
+        setStatus("Share dialog opened successfully.");
+      } else {
+        await navigator.clipboard.writeText(`${shareText}${shareUrl}`);
+        setStatus("Message copied to clipboard.");
+      }
+    } catch (error) {
+      console.error("Share failed:", error);
+      setStatus("Unable to share automatically. Copy the link manually.");
+    }
+
+    setLoading(false);
+  };
+
   const handleRemoveMember = async (familyId, memberId) => {
     setStatus("Removing member...");
     setLoading(true);
+
+    const memberToRemove = (familyMembers[familyId] || []).find(
+      (member) => member.id === memberId,
+    );
 
     const { error } = await supabase
       .from("members")
@@ -223,7 +260,60 @@ export default function Host() {
       return next;
     });
 
+    if (memberToRemove?.email) {
+      sendMemberRemovedEmail({
+        email: memberToRemove.email,
+        memberName: memberToRemove.name,
+        serviceName: updatedFamily?.service_name || "your family",
+        hostName: updatedFamily?.host_name || "your host",
+      }).catch((error) => {
+        console.error("Member removed email failed:", error);
+      });
+    }
+
     setStatus("Member removed from the family.");
+    setLoading(false);
+  };
+
+  const handleLeaveFamily = async (family) => {
+    if (!family) return;
+    if (
+      !window.confirm(
+        "Leave this family? You can rejoin later if slots are available.",
+      )
+    ) {
+      return;
+    }
+
+    setStatus("Leaving family...");
+    setLoading(true);
+
+    const { error } = await supabase
+      .from("members")
+      .delete()
+      .eq("family_id", family.id)
+      .eq("user_id", session?.user?.id)
+      .limit(1);
+
+    if (error) {
+      console.error("Leave family error:", error);
+      setStatus("Unable to leave this family. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    if (family.id) {
+      await supabase
+        .from("families")
+        .update({ filled_slots: Math.max(0, family.filled_slots - 1) })
+        .eq("id", family.id);
+    }
+
+    setJoinedFamilies((current) =>
+      current.filter((joined) => joined.id !== family.id),
+    );
+
+    setStatus("You have left the family.");
     setLoading(false);
   };
 
@@ -257,6 +347,31 @@ export default function Host() {
         ? "Family removed from live listings."
         : "Family is now live!",
     );
+    setLoading(false);
+  };
+
+  const handleSendPaymentReminder = async (member, family) => {
+    if (!member.email) {
+      setStatus("This member does not have an email address.");
+      return;
+    }
+
+    setStatus("Sending payment reminder...");
+    setLoading(true);
+
+    try {
+      await sendPaymentReminderEmail({
+        email: member.email,
+        memberName: member.name,
+        serviceName: family.service_name,
+        hostName: family.host_name,
+      });
+      setStatus("Payment reminder sent.");
+    } catch (error) {
+      console.error("Payment reminder failed:", error);
+      setStatus("Unable to send reminder. Please try again.");
+    }
+
     setLoading(false);
   };
 
@@ -309,6 +424,21 @@ export default function Host() {
     setTotalSlots("");
     setWhatsappLink("");
 
+    if (session?.user?.email) {
+      sendHostRegistrationEmail({
+        email: session.user.email,
+        family: {
+          host_name: hostName,
+          service_name: serviceName,
+          total_slots: Number(totalSlots),
+          price_per_slot: Number(pricePerSlot),
+          whatsapp_group_link: whatsappLink,
+        },
+      }).catch((error) => {
+        console.error("Host registration email failed:", error);
+      });
+    }
+
     if (session?.user?.id) {
       await refreshHostData(session.user.id);
     }
@@ -356,13 +486,33 @@ export default function Host() {
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
       {loading && <LoadingOverlay message={status || "Processing…"} />}
       <div className="mx-auto max-w-3xl space-y-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-slate-100"
           >
             ← Back
+          </button>
+          <button
+            type="button"
+            onClick={handleShareHostPage}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+              <path d="M16 6l4 4-4 4" />
+              <path d="M20 10H8a4 4 0 0 0-4 4v2" />
+            </svg>
+            Share host page
           </button>
         </div>
 
@@ -595,17 +745,34 @@ export default function Host() {
                                     {member.email}
                                   </p>
                                 )}
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                  {member.payment_confirmed
+                                    ? "Payment confirmed"
+                                    : "Payment pending"}
+                                </p>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleRemoveMember(family.id, member.id)
-                                }
-                                disabled={loading}
-                                className="rounded-full bg-orange-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50"
-                              >
-                                Remove
-                              </button>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleSendPaymentReminder(member, family)
+                                  }
+                                  disabled={loading || member.payment_confirmed}
+                                  className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                                >
+                                  {member.payment_confirmed ? "Paid" : "Remind"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRemoveMember(family.id, member.id)
+                                  }
+                                  disabled={loading}
+                                  className="rounded-full bg-orange-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50"
+                                >
+                                  Remove
+                                </button>
+                              </div>
                             </div>
                           ))
                         )}
@@ -678,6 +845,16 @@ export default function Host() {
                       <p className="font-semibold text-slate-900">Slots</p>
                       <p className="mt-2">{family.total_slots} total</p>
                     </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleLeaveFamily(family)}
+                      disabled={loading}
+                      className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                    >
+                      Leave family
+                    </button>
                   </div>
                 </div>
               ))}

@@ -22,6 +22,8 @@ create table members (
   name text not null,
   phone text not null,
   email text,
+  social_media_1 text not null,
+  social_media_2 text not null,
   payment_confirmed boolean default false,
   joined_at timestamp default now()
 );

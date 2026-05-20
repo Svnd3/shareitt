@@ -39,10 +39,39 @@ export default function Home({ session, authLoading }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
+  const [shareStatus, setShareStatus] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
   const notice = location.state?.notice;
+
+  const handleShareApp = async () => {
+    const shareText =
+      "Save on subscriptions with ShareIt Kenya. Browse live family listings, pay a KSh 90 reliability fee, and join WhatsApp groups to share services together. ";
+    const shareUrl = window.location.origin;
+    const sharePayload = {
+      title: "ShareIt — Kenya subscription families",
+      text: `${shareText}${shareUrl}`,
+      url: shareUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(sharePayload);
+        setShareStatus("Share dialog opened successfully.");
+      } else {
+        await navigator.clipboard.writeText(`${shareText}${shareUrl}`);
+        setShareStatus("Share message copied to clipboard.");
+      }
+    } catch (error) {
+      console.error("Share failed:", error);
+      setShareStatus(
+        "Unable to share automatically. Copy this website link manually.",
+      );
+    }
+
+    window.setTimeout(() => setShareStatus(""), 4000);
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -156,6 +185,26 @@ export default function Home({ session, authLoading }) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600">
+              <button
+                type="button"
+                onClick={handleShareApp}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+                  <path d="M16 6l4 4-4 4" />
+                  <path d="M20 10H8a4 4 0 0 0-4 4v2" />
+                </svg>
+                Share
+              </button>
               <a href="#faq" className="hover:text-emerald-600">
                 FAQ
               </a>
@@ -186,6 +235,11 @@ export default function Home({ session, authLoading }) {
               )}
             </div>
           </nav>
+          {shareStatus ? (
+            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-sm">
+              {shareStatus}
+            </div>
+          ) : null}
         </header>
 
         {!hasSupabaseConfig && (

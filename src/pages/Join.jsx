@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { sendMembershipRequestEmail } from "../lib/sendEmail";
 import { defaultFamilies } from "../data/defaultFamilies";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -12,6 +13,8 @@ export default function Join() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [socialMedia1, setSocialMedia1] = useState("");
+  const [socialMedia2, setSocialMedia2] = useState("");
   const [status, setStatus] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,6 +80,12 @@ export default function Join() {
       setStatus("Please enter your full name and phone number.");
       return;
     }
+    if (!socialMedia1.trim() || !socialMedia2.trim()) {
+      setStatus(
+        "Please provide at least two social media contacts for confirmation.",
+      );
+      return;
+    }
     if (!family) {
       setStatus("Unable to load family details.");
       return;
@@ -118,6 +127,8 @@ export default function Join() {
       name,
       phone,
       email: email.trim() || session?.user?.email || null,
+      social_media_1: socialMedia1.trim(),
+      social_media_2: socialMedia2.trim(),
     });
 
     if (insertError) {
@@ -140,12 +151,25 @@ export default function Join() {
         : prev,
     );
 
+    const notificationEmail = email.trim() || session?.user?.email;
+    if (notificationEmail) {
+      sendMembershipRequestEmail({
+        email: notificationEmail,
+        memberName: name,
+        family,
+      }).catch((error) => {
+        console.error("Membership request email failed:", error);
+      });
+    }
+
     setStatus("Joined successfully! You are now a member of this family.");
     setJoined(true);
     setLoading(false);
     setName("");
     setPhone("");
     setEmail("");
+    setSocialMedia1("");
+    setSocialMedia2("");
   };
 
   if (authLoading) {
@@ -307,6 +331,29 @@ export default function Join() {
                     onChange={(event) => setEmail(event.target.value)}
                     type="email"
                     placeholder="you@example.com"
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </label>
+                <p className="text-xs text-slate-500">
+                  Add at least two social media contacts for confirmation.
+                </p>
+                <label className="space-y-2 text-sm text-slate-700">
+                  Social media contact 1
+                  <input
+                    value={socialMedia1}
+                    onChange={(event) => setSocialMedia1(event.target.value)}
+                    type="text"
+                    placeholder="WhatsApp / Instagram / Telegram"
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </label>
+                <label className="space-y-2 text-sm text-slate-700">
+                  Social media contact 2
+                  <input
+                    value={socialMedia2}
+                    onChange={(event) => setSocialMedia2(event.target.value)}
+                    type="text"
+                    placeholder="Instagram / Telegram / Twitter"
                     className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
                   />
                 </label>

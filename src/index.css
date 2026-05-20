@@ -21,6 +21,17 @@ body {
   color: #0f172a;
   overflow-x: hidden;
   max-width: 100vw;
+  min-width: 0;
+}
+
+#root {
+  min-width: 0;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
 }
 
 * {
