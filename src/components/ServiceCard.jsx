@@ -99,6 +99,8 @@ export default function ServiceCard({ family }) {
   const emoji = serviceEmojiMap[family.service_name.split(" ")[0]] ?? "⭐";
   const remainingFunding = slotsLeft * family.price_per_slot;
   const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
+  const safeUniqueName = uniqueName ?? "";
+  const familyUniqueName = family.unique_name ?? "";
   const [editingUnique, setEditingUnique] = useState(false);
   const [savingUnique, setSavingUnique] = useState(false);
   const reportMailto = `mailto:keninnofficial@gmail.com?subject=${encodeURIComponent(
@@ -158,13 +160,14 @@ export default function ServiceCard({ family }) {
                       e.currentTarget.blur();
                     }
                     if (e.key === "Escape") {
-                      setUniqueName(family.unique_name ?? "");
+                      setUniqueName(familyUniqueName);
                       setEditingUnique(false);
                     }
                   }}
                   onBlur={async () => {
                     setEditingUnique(false);
-                    if ((uniqueName ?? "").trim() === (family.unique_name ?? "").trim()) return;
+                    if (safeUniqueName.trim() === familyUniqueName.trim())
+                      return;
                     setSavingUnique(true);
                     try {
                       const { error } = await supabase
@@ -174,7 +177,7 @@ export default function ServiceCard({ family }) {
                       if (error) throw error;
                     } catch (err) {
                       console.error("Failed to save unique name", err);
-                      setUniqueName(family.unique_name ?? "");
+                      setUniqueName(familyUniqueName);
                     } finally {
                       setSavingUnique(false);
                     }
@@ -184,14 +187,16 @@ export default function ServiceCard({ family }) {
                 />
                 <button
                   onClick={() => {
-                    setUniqueName(family.unique_name ?? "");
+                    setUniqueName(familyUniqueName);
                     setEditingUnique(false);
                   }}
                   className="text-sm text-slate-500"
                 >
                   Cancel
                 </button>
-                {savingUnique && <span className="text-sm text-slate-500">Saving…</span>}
+                {savingUnique && (
+                  <span className="text-sm text-slate-500">Saving…</span>
+                )}
               </div>
             ) : (
               <div>
