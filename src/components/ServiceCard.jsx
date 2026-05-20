@@ -3,29 +3,43 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { serviceEmojiMap } from "../data/defaultFamilies";
 
-const brandLogos = {
-  "netflix standard": "https://logo.clearbit.com/netflix.com",
-  "netflix basic": "https://logo.clearbit.com/netflix.com",
-  "spotify premium": "https://logo.clearbit.com/spotify.com",
-  "chatgpt plus": "https://logo.clearbit.com/openai.com",
-  "claude pro": "https://logo.clearbit.com/anthropic.com",
-  "canva pro": "https://logo.clearbit.com/canva.com",
-  "youtube premium": "https://logo.clearbit.com/youtube.com",
-  "prime video": "https://logo.clearbit.com/amazon.com",
-  "disney+": "https://logo.clearbit.com/disneyplus.com",
-  "apple tv+": "https://logo.clearbit.com/apple.com",
-  "microsoft 365": "https://logo.clearbit.com/microsoft.com",
-  "google one": "https://logo.clearbit.com/google.com",
-  "notion": "https://logo.clearbit.com/notion.so",
-  "figma": "https://logo.clearbit.com/figma.com",
-  "dropbox": "https://logo.clearbit.com/dropbox.com",
-  "adobe creative cloud": "https://logo.clearbit.com/adobe.com",
-  "duolingo plus": "https://logo.clearbit.com/duolingo.com",
-  "linkedin premium": "https://logo.clearbit.com/linkedin.com",
-  "showmax": "https://logo.clearbit.com/showmax.com",
-  "deezer": "https://logo.clearbit.com/deezer.com",
-  "xbox game pass": "https://logo.clearbit.com/xbox.com",
-  "playstation plus": "https://logo.clearbit.com/playstation.com",
+const getBrandLogo = (serviceName) => {
+  const brandMap = {
+    "Netflix Standard": "netflix.com",
+    "Netflix Basic": "netflix.com",
+    "Spotify Premium": "spotify.com",
+    "ChatGPT Plus": "openai.com",
+    "Claude Pro": "anthropic.com",
+    "Canva Pro": "canva.com",
+    "YouTube Premium": "youtube.com",
+    "Prime Video": "amazon.com",
+    "Disney+": "disneyplus.com",
+    "Apple TV+": "apple.com",
+    "Microsoft 365": "microsoft.com",
+    "Google One": "google.com",
+    Notion: "notion.so",
+    Figma: "figma.com",
+    Dropbox: "dropbox.com",
+    Showmax: "showmax.com",
+    Deezer: "deezer.com",
+    "Xbox Game Pass": "xbox.com",
+    "PlayStation Plus": "playstation.com",
+    "LinkedIn Premium": "linkedin.com",
+    "Duolingo Plus": "duolingo.com",
+  };
+
+  const lowerName = serviceName?.toLowerCase() ?? "";
+  const key = Object.keys(brandMap).find(
+    (k) =>
+      lowerName.includes(k.toLowerCase()) ||
+      k.toLowerCase().includes(lowerName),
+  );
+
+  if (key) {
+    return `https://www.google.com/s2/favicons?domain=${brandMap[key]}&sz=128`;
+  }
+
+  return null;
 };
 
 export default function ServiceCard({ family }) {
@@ -80,16 +94,8 @@ export default function ServiceCard({ family }) {
     slotsLeft <= 1
       ? "bg-red-100 text-red-800"
       : "bg-emerald-100 text-emerald-900";
-  const logoKey = family.service_name?.trim().toLowerCase() ?? "";
-  const primaryLogo = brandLogos[logoKey];
-  const fallbackLogo = "/logo.png";
-  const [useFallbackLogo, setUseFallbackLogo] = useState(false);
-
-  useEffect(() => {
-    setUseFallbackLogo(false);
-  }, [family.service_name]);
-
-  const logoUrl = useFallbackLogo ? fallbackLogo : primaryLogo || fallbackLogo;
+  const primaryLogo = getBrandLogo(family.service_name);
+  const logoUrl = primaryLogo || "/logo.png";
   const logoAlt = primaryLogo ? `${family.service_name} logo` : "ShareIt logo";
   const remainingFunding = slotsLeft * family.price_per_slot;
   const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
@@ -112,8 +118,10 @@ export default function ServiceCard({ family }) {
             <img
               src={logoUrl}
               alt={logoAlt}
-              onError={() => {
-                if (!useFallbackLogo) setUseFallbackLogo(true);
+              onError={(e) => {
+                if (e.target && e.target.src) {
+                  e.target.src = "/logo.png";
+                }
               }}
               className="h-full w-full rounded-full bg-white object-contain p-2"
             />
