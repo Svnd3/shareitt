@@ -6,6 +6,7 @@ import FAQ from "../components/FAQ";
 import QuickPairing from "../components/QuickPairing";
 import TrustBanner from "../components/TrustBanner";
 import LoadingSpinner from "../components/LoadingSpinner";
+import ShareItLogo from "../assets/shareitlogo.png";
 import SpotifyImg from "../assets/spotify.jpg";
 import NetflixImg from "../assets/netflix.jpg";
 import ChatGPTImg from "../assets/chatgpt.jpg";
@@ -146,9 +147,7 @@ export default function Home({ session, authLoading }) {
         <header className="sticky top-0 z-30 mb-4 bg-[#F8F9FA]">
           <nav className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-base font-semibold text-slate-900">
-                S
-              </span>
+              <img src={ShareItLogo} alt="ShareIt" className="h-12 w-auto" />
               <div>
                 <p className="text-sm font-semibold text-slate-950">ShareIt</p>
                 <p className="text-xs text-slate-500">
