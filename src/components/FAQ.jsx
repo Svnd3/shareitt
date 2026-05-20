@@ -10,7 +10,7 @@ export default function FAQ() {
     },
     {
       q: "How does the reliability fee work?",
-      a: "The KSh 90 reliability fee is a one-time payment to verify you're a genuine user. It's sent via M-Pesa to 0741401230 when you join a family. This protects hosts from no-shows.",
+      a: "The KSh 90 reliability fee is a one-time payment that helps confirm you’re a real participant and keep the community safer. It is sent via M-Pesa to 0741401230 when you join a family. This fee helps hosts feel more confident about new members and is one of the methods we use to discourage and identify people who try to join without paying, avoid their responsibility, or act in ways that harm the group.",
     },
     {
       q: "Is my payment safe?",
@@ -21,8 +21,12 @@ export default function FAQ() {
       a: 'Yes! Head to "Host a Family" and fill in your service details, price, and total slots. You\'ll receive join requests via WhatsApp.',
     },
     {
-      q: "What if someone doesn't pay their share?",
-      a: "This is between you and your host. That's why we have the reliability fee and verified badges. Always use WhatsApp for communication and keep records.",
+      q: "What if a member misses a payment?",
+      a: "If a member misses a payment, discuss it with your host and keep a record of your chat. The reliability fee, verified badges, and good communication are meant to reduce late or unreliable payments. Always use WhatsApp for agreements and keep proof of payments.",
+    },
+    {
+      q: "Can I delay my monthly recharge?",
+      a: "Monthly recharge timing is usually decided by the host or service plan. If you need more time, ask the host first and agree on a new payment date before the due date. Delaying without notice can affect the whole group, so clear communication helps everyone stay on track and keeps the plan working smoothly.",
     },
     {
       q: "What is ShareIt responsible for?",

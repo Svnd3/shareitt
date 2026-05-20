@@ -5,6 +5,7 @@ import ServiceCard from "../components/ServiceCard";
 import FAQ from "../components/FAQ";
 import QuickPairing from "../components/QuickPairing";
 import TrustBanner from "../components/TrustBanner";
+import LoadingSpinner from "../components/LoadingSpinner";
 import ShareItLogo from "../assets/shareitlogo.png";
 import SpotifyImg from "../assets/spotify.jpg";
 import NetflixImg from "../assets/netflix.jpg";
@@ -33,6 +34,8 @@ const slides = [
 export default function Home({ session, authLoading }) {
   const [families, setFamilies] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
@@ -50,28 +53,38 @@ export default function Home({ session, authLoading }) {
 
   useEffect(() => {
     const fetchFamilies = async () => {
-      const { data, error } = await supabase
-        .from("families")
-        .select(
-          "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,created_by,created_at",
-        )
-        .eq("is_live", true)
-        .order("created_at", { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from("families")
+          .select(
+            "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,created_by,created_at",
+          )
+          .eq("is_live", true)
+          .order("created_at", { ascending: false });
 
-      if (error || !data) {
-        console.error("Home fetch families error:", error);
+        if (error || !data) {
+          console.error("Home fetch families error:", error);
+          setFetchError(
+            error?.message ||
+              "Unable to load families from Supabase. Please check your environment and RLS policies.",
+          );
+          setFamilies([]);
+          setLoading(false);
+          return;
+        }
+
+        setFamilies(data);
+        setFetchError("");
+      } catch (error) {
+        console.error("Home fetch families exception:", error);
         setFetchError(
           error?.message ||
             "Unable to load families from Supabase. Please check your environment and RLS policies.",
         );
         setFamilies([]);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      setFamilies(data);
-      setFetchError("");
-      setLoading(false);
     };
 
     fetchFamilies();
@@ -90,17 +103,40 @@ export default function Home({ session, authLoading }) {
   };
 
   const collection = useMemo(() => {
-    if (activeFilter === "All") return families;
-    return families.filter((family) =>
-      family.service_name.toLowerCase().includes(activeFilter.toLowerCase()),
+    const filtered =
+      activeFilter === "All"
+        ? families
+        : families.filter((family) =>
+            family.service_name
+              .toLowerCase()
+              .includes(activeFilter.toLowerCase()),
+          );
+
+    if (!searchQuery) return filtered;
+
+    const query = searchQuery.toLowerCase();
+    return filtered.filter(
+      (family) =>
+        family.service_name.toLowerCase().includes(query) ||
+        family.host_name.toLowerCase().includes(query),
     );
-  }, [activeFilter, families]);
+  }, [activeFilter, families, searchQuery]);
 
   const activeFamilies = collection.length;
   const membersSaved = collection.reduce(
     (sum, family) => sum + family.filled_slots,
     0,
   );
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#F8F9FA]">
+        <div className="mx-auto flex min-h-screen items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
+          <LoadingSpinner message="Loading families…" />
+        </div>
+      </main>
+    );
+  }
   const servicesAvailable = new Set(
     collection.map((family) => family.service_name.split(" ")[0]),
   ).size;
@@ -276,6 +312,43 @@ export default function Home({ session, authLoading }) {
 
         <QuickPairing />
         <section className="space-y-4 py-4">
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+              <label className="relative block w-full">
+                <span className="sr-only">Search families</span>
+                <input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search families, services, or hosts"
+                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setSearchQuery(searchTerm.trim())}
+                className="rounded-3xl bg-[#1A7A3C] px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+              >
+                Search
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  setSearchQuery("");
+                  setActiveFilter("All");
+                }}
+                className="rounded-3xl border border-slate-200 bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+              >
+                Clear
+              </button>
+            </div>
+            {searchQuery && (
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                Showing results for <strong>{searchQuery}</strong>.
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-2">
             {filters.map((item) => (
               <button

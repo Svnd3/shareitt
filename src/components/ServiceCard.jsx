@@ -3,6 +3,41 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { serviceEmojiMap } from "../data/defaultFamilies";
 
+const brandLogos = {
+  Netflix: "https://logo.clearbit.com/netflix.com",
+  "Netflix Standard": "https://logo.clearbit.com/netflix.com",
+  "Netflix Premium": "https://logo.clearbit.com/netflix.com",
+  "Netflix Basic": "https://logo.clearbit.com/netflix.com",
+  Spotify: "https://logo.clearbit.com/spotify.com",
+  "Spotify Premium": "https://logo.clearbit.com/spotify.com",
+  "YouTube Premium": "https://logo.clearbit.com/youtube.com",
+  "Prime Video": "https://logo.clearbit.com/primevideo.com",
+  "Disney+": "https://logo.clearbit.com/disneyplus.com",
+  "Apple TV+": "https://logo.clearbit.com/apple.com",
+  Deezer: "https://logo.clearbit.com/deezer.com",
+  Tidal: "https://logo.clearbit.com/tidal.com",
+  Showmax: "https://logo.clearbit.com/showmax.com",
+  "Canva Pro": "https://logo.clearbit.com/canva.com",
+  "Adobe Creative Cloud": "https://logo.clearbit.com/adobe.com",
+  Notion: "https://logo.clearbit.com/notion.com",
+  Figma: "https://logo.clearbit.com/figma.com",
+  Dropbox: "https://logo.clearbit.com/dropbox.com",
+  "Google One": "https://logo.clearbit.com/google.com",
+  "Microsoft 365": "https://logo.clearbit.com/microsoft.com",
+  "ChatGPT Plus": "https://logo.clearbit.com/openai.com",
+  "Claude Pro": "https://logo.clearbit.com/anthropic.com",
+  Midjourney: "https://logo.clearbit.com/midjourney.com",
+  "Gemini Advanced": "https://logo.clearbit.com/google.com",
+  "Copilot Pro": "https://logo.clearbit.com/microsoft.com",
+  "Xbox Game Pass": "https://logo.clearbit.com/xbox.com",
+  "PlayStation Plus": "https://logo.clearbit.com/playstation.com",
+  "EA Play": "https://logo.clearbit.com/ea.com",
+  "Duolingo Plus": "https://logo.clearbit.com/duolingo.com",
+  Coursera: "https://logo.clearbit.com/coursera.org",
+  "LinkedIn Premium": "https://logo.clearbit.com/linkedin.com",
+  Calm: "https://logo.clearbit.com/calm.com",
+};
+
 export default function ServiceCard({ family }) {
   const [isHost, setIsHost] = useState(false);
   const [isMember, setIsMember] = useState(false);
@@ -49,11 +84,18 @@ export default function ServiceCard({ family }) {
       mounted = false;
     };
   }, [family.id, family.created_by]);
+  const [logoError, setLogoError] = useState(false);
+  useEffect(() => {
+    setLogoError(false);
+  }, [family.service_name]);
+
   const slotsLeft = family.total_slots - family.filled_slots;
   const slotBadge =
     slotsLeft <= 1
       ? "bg-red-100 text-red-800"
       : "bg-emerald-100 text-emerald-900";
+  const logoUrl = brandLogos[family.service_name];
+  const hasLogo = Boolean(logoUrl && !logoError);
   const emoji = serviceEmojiMap[family.service_name.split(" ")[0]] ?? "⭐";
   const remainingFunding = slotsLeft * family.price_per_slot;
   const reportMailto = `mailto:keninnofficial@gmail.com?subject=${encodeURIComponent(
@@ -67,8 +109,19 @@ export default function ServiceCard({ family }) {
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-[#E6F3E8] text-2xl">
-            {emoji}
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-3xl bg-slate-100">
+            {hasLogo ? (
+              <img
+                src={logoUrl}
+                alt={`${family.service_name} logo`}
+                onError={() => setLogoError(true)}
+                className="h-full w-full object-contain p-2"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-slate-100 text-xl text-slate-600">
+                <span>⭐</span>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-col gap-1 text-right text-sm text-slate-500">

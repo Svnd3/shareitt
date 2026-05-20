@@ -15,6 +15,7 @@ export default function Join() {
   const [status, setStatus] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [joined, setJoined] = useState(false);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -90,7 +91,26 @@ export default function Join() {
     }
 
     setLoading(true);
-    setStatus("Sending your request...");
+    setStatus("Joining the family...");
+
+    const { data: existingMember, error: existingError } = await supabase
+      .from("members")
+      .select("id")
+      .eq("family_id", family.id)
+      .eq("user_id", session?.user?.id)
+      .maybeSingle();
+
+    if (existingError) {
+      setStatus("Unable to verify membership. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    if (existingMember) {
+      setStatus("You are already a member of this family.");
+      setLoading(false);
+      return;
+    }
 
     const { error: insertError } = await supabase.from("members").insert({
       family_id: family.id,
@@ -101,7 +121,7 @@ export default function Join() {
     });
 
     if (insertError) {
-      setStatus("Could not submit your join request. Please try again.");
+      setStatus("Could not join this family. Please try again.");
       setLoading(false);
       return;
     }
@@ -111,19 +131,21 @@ export default function Join() {
       .update({ filled_slots: family.filled_slots + 1 })
       .eq("id", family.id);
 
-    const message = `Hi ShareIt! I just requested to join ${family.service_name} hosted by ${family.host_name}. My name is ${name}. phone ${phone}. Please confirm my request.`;
-    window.open(
-      `https://wa.me/254741401230?text=${encodeURIComponent(message)}`,
-      "_blank",
+    setFamily((prev) =>
+      prev
+        ? {
+            ...prev,
+            filled_slots: prev.filled_slots + 1,
+          }
+        : prev,
     );
-    setStatus(
-      "Request sent! Open WhatsApp to confirm your request and connect with the host.",
-    );
+
+    setStatus("Joined successfully! You are now a member of this family.");
+    setJoined(true);
     setLoading(false);
     setName("");
     setPhone("");
     setEmail("");
-    setTimeout(() => navigate("/"), 2000);
   };
 
   if (authLoading) {
@@ -230,7 +252,7 @@ export default function Join() {
 
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <h2 className="text-2xl font-semibold text-slate-950">
-            Request to join
+            Join the family
           </h2>
           {family.created_by === session?.user?.id ? (
             <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-700">
@@ -240,7 +262,7 @@ export default function Join() {
           ) : (
             <>
               <p className="mt-2 text-sm text-slate-600">
-                Submit your details and open WhatsApp to request membership.
+                Submit your details to join this family immediately.
               </p>
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -295,11 +317,28 @@ export default function Join() {
                     disabled={loading || slotsLeft <= 0}
                     className="inline-flex w-full items-center justify-center rounded-full bg-[#1A7A3C] px-6 py-4 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
-                    {loading ? "Processing…" : "Request to join"}
+                    {loading ? "Processing…" : "Join now"}
                   </button>
                   {status && <p className="text-sm text-slate-700">{status}</p>}
                 </div>
               </form>
+              {joined && family.whatsapp_group_link && (
+                <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+                  <p className="font-semibold">Next step</p>
+                  <p className="mt-2">
+                    You have been added to the family. Use the WhatsApp group
+                    link below to connect with the host and other members.
+                  </p>
+                  <a
+                    href={family.whatsapp_group_link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex rounded-full bg-[#1A7A3C] px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                  >
+                    Open WhatsApp group
+                  </a>
+                </div>
+              )}
             </>
           )}
         </div>

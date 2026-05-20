@@ -5,18 +5,16 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 function makeMockBuilder() {
   const resp = () => Promise.resolve({ data: null, error: null });
-  return {
-    select: () => ({
-      order: () => resp(),
-      eq: () => ({ single: () => resp() }),
-      then: (cb) => resp().then(cb),
-    }),
+  const builder = {
+    select: () => builder,
     order: () => resp(),
-    eq: () => ({ single: () => resp() }),
+    eq: () => builder,
+    then: (cb) => resp().then(cb),
     insert: () => resp(),
-    update: () => ({ eq: () => resp() }),
+    update: () => builder,
     single: () => resp(),
   };
+  return builder;
 }
 
 let supabase;
