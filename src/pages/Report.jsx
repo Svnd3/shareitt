@@ -7,7 +7,7 @@ const emailBody =
 
 export default function Report() {
   return (
-    <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
       <div className="mx-auto max-w-3xl space-y-8">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-sm uppercase tracking-[0.3em] text-emerald-700">

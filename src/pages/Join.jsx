@@ -224,7 +224,7 @@ export default function Join() {
 
   if (authLoading) {
     return (
-      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
         <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
           <LoadingSpinner message="Checking your account…" />
         </div>
@@ -234,7 +234,7 @@ export default function Join() {
 
   if (!session) {
     return (
-      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
         <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-2xl font-semibold text-slate-950">
             Sign in to join
@@ -258,7 +258,7 @@ export default function Join() {
 
   if (!family) {
     return (
-      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
         <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-2xl font-semibold text-slate-950">
             Family not found
@@ -290,7 +290,7 @@ export default function Join() {
   const slotsLeft = family.total_slots - family.filled_slots;
 
   return (
-    <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
       <div className="mx-auto max-w-3xl space-y-8">
         <HowItWorks />
 

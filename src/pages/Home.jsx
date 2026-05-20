@@ -258,8 +258,8 @@ export default function Home({ session, authLoading }) {
   ).size;
 
   return (
-    <main className="min-h-screen bg-[#F8F9FA]">
-      <div className="mx-auto max-w-screen-xl px-4 pb-32 pt-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#F8F9FA]" style={{ touchAction: 'pan-y' }}>
+      <div className="mx-auto max-w-screen-xl px-4 pb-32 pt-4 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
         <header className="sticky top-0 z-30 mb-4 bg-[#F8F9FA]">
           <nav className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
@@ -622,7 +622,7 @@ export default function Home({ session, authLoading }) {
                     Close
                   </button>
                 </div>
-                <div className="space-y-4 px-4 py-4">
+                <div className="space-y-4 px-4 py-4 overflow-y-auto" style={{ touchAction: 'pan-y', maxHeight: '70vh' }}>
                   <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                       Filter by service
@@ -695,18 +695,20 @@ export default function Home({ session, authLoading }) {
             </div>
           )}
 
-          <div id="listings" className="grid gap-3 grid-cols-2 xl:grid-cols-3">
-            {loading ? (
-              <SkeletonGrid count={6} />
-            ) : collection.length === 0 ? (
-              <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-                No families found.
-              </div>
-            ) : (
-              collection.map((family) => (
-                <ServiceCard key={family.id} family={family} />
-              ))
-            )}
+          <div className="flex justify-center">
+            <div id="listings" className="w-full max-w-[92%] grid gap-3 md:grid-cols-2 md:max-w-full xl:grid-cols-3" style={{ touchAction: 'pan-y' }}>
+              {loading ? (
+                <SkeletonGrid count={6} />
+              ) : collection.length === 0 ? (
+                <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+                  No families found.
+                </div>
+              ) : (
+                collection.map((family) => (
+                  <ServiceCard key={family.id} family={family} />
+                ))
+              )}
+            </div>
           </div>
         </section>
 

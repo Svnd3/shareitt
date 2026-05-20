@@ -130,7 +130,7 @@ export default function Pay() {
 
   if (checkingPayment) {
     return (
-      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
         <div className="mx-auto w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-center text-sm text-slate-600">
             Checking payment status…

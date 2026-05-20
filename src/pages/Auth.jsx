@@ -565,7 +565,7 @@ export default function Auth() {
   const { label, sub } = titles[mode];
 
   return (
-    <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
       <div className="mx-auto w-full max-w-md">
         {/* Card */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">

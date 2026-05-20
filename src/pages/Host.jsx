@@ -454,7 +454,7 @@ export default function Host() {
 
   if (!session) {
     return (
-      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-3xl font-semibold text-slate-950">
             Sign in to host
@@ -485,7 +485,7 @@ export default function Host() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
       {loading && <LoadingOverlay message={status || "Processing…"} />}
       <div className="mx-auto max-w-3xl space-y-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

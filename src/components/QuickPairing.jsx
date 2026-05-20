@@ -4,15 +4,19 @@ export default function QuickPairing() {
   const [step, setStep] = useState(1);
   const [slotCount, setSlotCount] = useState(1);
   const [message, setMessage] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
 
   const handleQuickPair = () => {
-    const totalCost = 90;
     const msg = `Hi ShareIt! I want to quickly pair Spotify Premium with ${slotCount} slot${slotCount > 1 ? "s" : ""}. I understand there is a one-time KSh 90 setup fee. Please match me on WhatsApp and find people to cost-share with.`;
     setMessage(msg);
-    window.open(
-      `https://wa.me/254741401230?text=${encodeURIComponent(msg)}`,
-      "_blank",
-    );
+    setConfirmed(true);
+    setTimeout(() => {
+      setConfirmed(false);
+      window.open(
+        `https://wa.me/254741401230?text=${encodeURIComponent(msg)}`,
+        "_blank",
+      );
+    }, 2000);
   };
 
   return (
@@ -91,12 +95,18 @@ export default function QuickPairing() {
               </div>
             </div>
 
-            <button
-              onClick={handleQuickPair}
-              className="w-full rounded-full bg-[#1A7A3C] px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-600"
-            >
-              Match on WhatsApp →
-            </button>
+            {confirmed ? (
+              <div className="w-full rounded-full bg-emerald-50 border border-emerald-200 px-6 py-3 text-sm font-bold text-emerald-700 text-center">
+                ✅ Request sent! We'll connect you within 24 hours.
+              </div>
+            ) : (
+              <button
+                onClick={handleQuickPair}
+                className="w-full rounded-full bg-[#1A7A3C] px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-600"
+              >
+                Match on WhatsApp →
+              </button>
+            )}
             <p className="text-xs text-slate-600">
               ✓ You'll be prioritized for faster Spotify pairing.
             </p>
