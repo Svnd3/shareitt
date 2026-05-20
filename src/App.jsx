@@ -14,6 +14,9 @@ import Host from "./pages/Host";
 import Report from "./pages/Report";
 import Auth from "./pages/Auth";
 import Pay from "./pages/Pay";
+import HowItWorksPage from "./pages/HowItWorks";
+import Footer from "./components/Footer";
+import { ToastProvider } from "./components/ToastProvider";
 
 function ProtectedRoute({ children, authLoading, session }) {
   const location = useLocation();
@@ -105,7 +108,9 @@ function AppRoutes() {
 
     supabase.auth
       .getSessionFromUrl({ storeSession: true })
-      .catch((err) => console.error("Supabase auth redirect error:", err.message))
+      .catch((err) =>
+        console.error("Supabase auth redirect error:", err.message),
+      )
       .finally(() => navigate(location.pathname, { replace: true }));
   }, [location.hash, location.pathname, location.search, navigate]);
 
@@ -195,6 +200,7 @@ function AppRoutes() {
         element={<Home session={session} authLoading={authLoading} />}
       />
       <Route path="/join/:familyId" element={<Join />} />
+      <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route
         path="/host"
         element={
@@ -239,7 +245,10 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <ToastProvider>
+        <AppRoutes />
+        <Footer />
+      </ToastProvider>
     </BrowserRouter>
   );
 }

@@ -5,16 +5,24 @@ export default function FAQ() {
 
   const faqs = [
     {
-      q: "What is ShareIt?",
-      a: "ShareIt is a subscription-sharing marketplace that connects families and individuals looking to share subscription costs for services like Spotify, Netflix, ChatGPT, and more across Kenya.",
+      q: "Is my payment safe?",
+      a: "Payments go directly to your host via M-Pesa. ShareIt is a matching platform, not a payment processor. Always verify the host details before sending money.",
     },
     {
       q: "How does the reliability fee work?",
       a: "The KSh 90 reliability fee is a one-time payment that helps confirm you’re a real participant and keep the community safer. It is sent via M-Pesa to 0741401230 when you join a family. This fee helps hosts feel more confident about new members and is one of the methods we use to discourage and identify people who try to join without paying, avoid their responsibility, or act in ways that harm the group.",
     },
     {
-      q: "Is my payment safe?",
-      a: "Payments go directly to your host via M-Pesa. ShareIt is a matching platform, not a payment processor. Always verify the host details before sending money.",
+      q: "What risks should I know?",
+      a: "There is a risk of group changes, host disputes, or account access issues. ShareIt cannot provide refunds, resolve M-Pesa disputes, or manage third-party bans. Report issues by email and keep your payment proof.",
+    },
+    {
+      q: "What is ShareIt responsible for?",
+      a: "ShareIt is only a marketplace for subscription groups. We do not process payments, hold funds, or guarantee third-party service access. You are responsible for payment and account sharing risks.",
+    },
+    {
+      q: "What is ShareIt?",
+      a: "ShareIt is a subscription-sharing marketplace that connects families and individuals looking to share subscription costs for services like Spotify, Netflix, ChatGPT, and more across Kenya.",
     },
     {
       q: "Can I host my own subscription?",
@@ -27,14 +35,6 @@ export default function FAQ() {
     {
       q: "Can I delay my monthly recharge?",
       a: "Monthly recharge timing is usually decided by the host or service plan. If you need more time, ask the host first and agree on a new payment date before the due date. Delaying without notice can affect the whole group, so clear communication helps everyone stay on track and keeps the plan working smoothly.",
-    },
-    {
-      q: "What is ShareIt responsible for?",
-      a: "ShareIt is only a marketplace for subscription groups. We do not process payments, hold funds, or guarantee third-party service access. You are responsible for payment and account sharing risks.",
-    },
-    {
-      q: "What risks should I know?",
-      a: "There is a risk of group changes, host disputes, or account access issues. ShareIt cannot provide refunds, resolve M-Pesa disputes, or manage third-party bans. Report issues by email and keep your payment proof.",
     },
     {
       q: "How do I join a family?",

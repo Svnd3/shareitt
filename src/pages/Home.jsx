@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase, hasSupabaseConfig } from "../lib/supabaseClient";
+import { useToast } from "../components/ToastProvider";
 import ServiceCard from "../components/ServiceCard";
 import FAQ from "../components/FAQ";
 import QuickPairing from "../components/QuickPairing";
@@ -33,13 +34,15 @@ const slides = [
 
 export default function Home({ session, authLoading }) {
   const [families, setFamilies] = useState([]);
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [activeService, setActiveService] = useState("All");
+  const [priceFilter, setPriceFilter] = useState("All");
+  const [slotFilter, setSlotFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
-  const [shareStatus, setShareStatus] = useState("");
+  const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -58,25 +61,24 @@ export default function Home({ session, authLoading }) {
     try {
       if (navigator.share) {
         await navigator.share(sharePayload);
-        setShareStatus("Share dialog opened successfully.");
+        toast.showToast("Share dialog opened successfully.", "success");
       } else {
         await navigator.clipboard.writeText(`${shareText}${shareUrl}`);
-        setShareStatus("Share message copied to clipboard.");
+        toast.showToast("Share message copied to clipboard.", "success");
       }
     } catch (error) {
       console.error("Share failed:", error);
-      setShareStatus(
+      toast.showToast(
         "Unable to share automatically. Copy this website link manually.",
+        "error",
       );
     }
-
-    window.setTimeout(() => setShareStatus(""), 4000);
   };
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((current) => (current + 1) % slides.length);
-    }, 3500);
+    }, 3000);
     return () => clearInterval(timer);
   }, []);
 
@@ -132,24 +134,52 @@ export default function Home({ session, authLoading }) {
   };
 
   const collection = useMemo(() => {
-    const filtered =
-      activeFilter === "All"
+    const filteredByService =
+      activeService === "All"
         ? families
         : families.filter((family) =>
             family.service_name
               .toLowerCase()
-              .includes(activeFilter.toLowerCase()),
+              .includes(activeService.toLowerCase()),
           );
 
-    if (!searchQuery) return filtered;
+    const filteredByPrice = filteredByService.filter((family) => {
+      const price = Number(family.price_per_slot || 0);
+      switch (priceFilter) {
+        case "Under KSh 200":
+          return price < 200;
+        case "KSh 200–400":
+          return price >= 200 && price <= 400;
+        case "Above KSh 400":
+          return price > 400;
+        default:
+          return true;
+      }
+    });
+
+    const filteredBySlots = filteredByPrice.filter((family) => {
+      const slotsLeft = family.total_slots - family.filled_slots;
+      switch (slotFilter) {
+        case "1 slot":
+          return slotsLeft === 1;
+        case "2-3 slots":
+          return slotsLeft >= 2 && slotsLeft <= 3;
+        case "4+ slots":
+          return slotsLeft >= 4;
+        default:
+          return true;
+      }
+    });
+
+    if (!searchQuery) return filteredBySlots;
 
     const query = searchQuery.toLowerCase();
-    return filtered.filter(
+    return filteredBySlots.filter(
       (family) =>
         family.service_name.toLowerCase().includes(query) ||
         family.host_name.toLowerCase().includes(query),
     );
-  }, [activeFilter, families, searchQuery]);
+  }, [activeService, families, priceFilter, searchQuery, slotFilter]);
 
   const activeFamilies = collection.length;
   const membersSaved = collection.reduce(
@@ -235,11 +265,6 @@ export default function Home({ session, authLoading }) {
               )}
             </div>
           </nav>
-          {shareStatus ? (
-            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-sm">
-              {shareStatus}
-            </div>
-          ) : null}
         </header>
 
         {!hasSupabaseConfig && (
@@ -260,42 +285,64 @@ export default function Home({ session, authLoading }) {
           </div>
         )}
 
+        <div className="mb-4 flex justify-end">
+          <Link
+            to="/how-it-works"
+            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+          >
+            How it works →
+          </Link>
+        </div>
+
         <section className="space-y-4 mb-4">
-          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-sm">
-            Pay a one-time KSh 90 reliability fee via WhatsApp to 0741401230
-            before joining a family. This keeps hosts protected and listings
-            trusted.
+          <div className="rounded-3xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 shadow-sm">
+            <span className="mr-2">🛡️</span>
+            Your safety matters — pay a one-time KSh 90 reliability fee via
+            M-Pesa to 0741401230 before joining. This protects hosts and keeps
+            our community trusted.
           </div>
           <h1 className="text-2xl font-bold text-slate-950">
             Stop overpaying for subscriptions.
           </h1>
           <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-md">
             <div className="relative h-48 w-full overflow-hidden bg-slate-300">
-              <img
-                src={
-                  [SpotifyImg, NetflixImg, ChatGPTImg, PrimeImg][currentSlide]
-                }
-                alt="Service"
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <p className="text-sm font-bold">
-                  {slides[currentSlide].title}
-                </p>
-              </div>
+              {[SpotifyImg, NetflixImg, ChatGPTImg, PrimeImg].map(
+                (image, idx) => (
+                  <div
+                    key={idx}
+                    className={`absolute inset-0 transition-all duration-500 ease-out transform-gpu ${
+                      idx === currentSlide
+                        ? "opacity-100 translate-y-0 scale-100"
+                        : "opacity-0 translate-y-4 scale-105"
+                    }`}
+                    style={{ willChange: "opacity, transform" }}
+                  >
+                    <img
+                      src={image}
+                      alt={slides[idx].title}
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                      <p className="text-sm font-bold">{slides[idx].title}</p>
+                    </div>
+                  </div>
+                ),
+              )}
             </div>
             <div className="flex items-center justify-between gap-2 px-4 py-3">
               <div className="flex gap-2">
                 {slides.map((_, idx) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => setCurrentSlide(idx)}
-                    className={`h-2 rounded-full transition ${
+                    className={`h-2 rounded-full transition-all duration-300 ${
                       currentSlide === idx
-                        ? "w-6 bg-emerald-600"
-                        : "w-2 bg-slate-300"
+                        ? "w-8 bg-emerald-600"
+                        : "w-2 bg-slate-300 hover:w-4 hover:bg-slate-400"
                     }`}
+                    aria-label={`Show slide ${idx + 1}`}
                   />
                 ))}
               </div>
@@ -330,40 +377,6 @@ export default function Home({ session, authLoading }) {
           </div>
         </section>
 
-        <section className="space-y-4 py-4">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 sm:items-center sm:justify-between sm:flex-row">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                  Recents
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-950">
-                  Recent active groups
-                </h2>
-              </div>
-              <Link
-                to="/report"
-                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
-              >
-                Report an issue
-              </Link>
-            </div>
-            <div className="mt-4 grid gap-3">
-              {collection.length > 0 ? (
-                collection
-                  .slice(0, 3)
-                  .map((family) => (
-                    <ServiceCard key={family.id} family={family} />
-                  ))
-              ) : (
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
-                  No active families found yet.
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
         <QuickPairing />
         <section className="space-y-4 py-4">
           <div className="space-y-4">
@@ -389,7 +402,9 @@ export default function Home({ session, authLoading }) {
                 onClick={() => {
                   setSearchTerm("");
                   setSearchQuery("");
-                  setActiveFilter("All");
+                  setActiveService("All");
+                  setPriceFilter("All");
+                  setSlotFilter("All");
                 }}
                 className="rounded-3xl border border-slate-200 bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
               >
@@ -403,20 +418,69 @@ export default function Home({ session, authLoading }) {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {filters.map((item) => (
-              <button
-                key={item}
-                onClick={() => setActiveFilter(item)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                  activeFilter === item
-                    ? "bg-[#1A7A3C] text-white"
-                    : "border border-slate-200 bg-slate-100 text-slate-700"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                Filter by service
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {filters.map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => setActiveService(item)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      activeService === item
+                        ? "bg-[#1A7A3C] text-white"
+                        : "border border-slate-200 bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                Filter by price
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {["All", "Under KSh 200", "KSh 200–400", "Above KSh 400"].map(
+                  (option) => (
+                    <button
+                      key={option}
+                      onClick={() => setPriceFilter(option)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        priceFilter === option
+                          ? "bg-[#1A7A3C] text-white"
+                          : "border border-slate-200 bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                Filter by slots left
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {["All", "1 slot", "2-3 slots", "4+ slots"].map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => setSlotFilter(option)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      slotFilter === option
+                        ? "bg-[#1A7A3C] text-white"
+                        : "border border-slate-200 bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div
@@ -434,51 +498,6 @@ export default function Home({ session, authLoading }) {
                 <ServiceCard key={family.id} family={family} />
               ))
             )}
-          </div>
-        </section>
-
-        <section className="space-y-4 py-8">
-          <h2 className="text-xl font-bold text-slate-950">How it works</h2>
-          <div className="space-y-3">
-            <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-4">
-              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                1
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Browse families
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Find services, prices, and availability near you.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-4">
-              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                2
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Reliability fee — KSh 90
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Pay once after signing in on the payment page.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-4">
-              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                3
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Join the group
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Get added to WhatsApp and start saving.
-                </p>
-              </div>
-            </div>
           </div>
         </section>
 

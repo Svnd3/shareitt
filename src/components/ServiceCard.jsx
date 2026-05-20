@@ -225,13 +225,13 @@ export default function ServiceCard({ family }) {
 
       <div className="mt-5 flex flex-wrap items-center gap-2 text-sm">
         <span
-          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm ${
+          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${
             family.is_active_host
-              ? "bg-emerald-100 text-emerald-800"
-              : "bg-amber-100 text-amber-800"
+              ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+              : "bg-slate-50 text-slate-600 border-slate-300"
           }`}
         >
-          {family.is_active_host ? "✓ Active Host" : "⚠ Unverified"}
+          {family.is_active_host ? "✓ Active Host" : "Pending Review"}
         </span>
         <span
           className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm ${slotBadge}`}
@@ -254,8 +254,9 @@ export default function ServiceCard({ family }) {
             <strong>KSh {remainingFunding}</strong>
           </p>
         ) : (
-          <p className="text-emerald-700 font-semibold">
-            Fully funded. If you're in this group, report an issue by email.
+          <p className="text-slate-600 font-medium">
+            🔔 This family is full — join the waitlist and we'll notify you
+            when a slot opens.
           </p>
         )}
       </div>

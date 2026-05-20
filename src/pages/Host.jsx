@@ -7,6 +7,7 @@ import {
   sendPaymentReminderEmail,
 } from "../lib/sendEmail";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useToast } from "../components/ToastProvider";
 
 function calculateMaintenanceFee(pricePerSlot, totalSlots) {
   const totalValue = pricePerSlot * totalSlots;
@@ -45,6 +46,7 @@ export default function Host() {
   const [joinedFamilies, setJoinedFamilies] = useState([]);
   const [familyMembers, setFamilyMembers] = useState({});
   const [managementLoading, setManagementLoading] = useState(false);
+  const toast = useToast();
 
   const loadHostData = async (userId) => {
     setManagementLoading(true);
