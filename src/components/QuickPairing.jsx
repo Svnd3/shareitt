@@ -39,6 +39,10 @@ export default function QuickPairing() {
           Press Match on WhatsApp and our team will find people to cost-share
           with.
         </p>
+        <p className="text-sm text-slate-600">
+          Use the WhatsApp button to send your request and we’ll connect you
+          with a suitable sharing group.
+        </p>
       </div>
 
       <div className="space-y-4 px-4 sm:px-0">

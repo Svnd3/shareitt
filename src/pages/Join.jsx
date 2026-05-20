@@ -288,6 +288,13 @@ export default function Join() {
               <p className="mt-2 text-sm text-slate-600">
                 Submit your details to join this family immediately.
               </p>
+              <div className="mt-4 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+                <p className="font-semibold">Social confirmation required</p>
+                <p className="mt-2 text-slate-700">
+                  Add at least two social media contacts so the host can confirm
+                  your profile. Use WhatsApp, Instagram, Telegram, or Twitter.
+                </p>
+              </div>
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-6">
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -334,26 +341,23 @@ export default function Join() {
                     className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
                   />
                 </label>
-                <p className="text-xs text-slate-500">
-                  Add at least two social media contacts for confirmation.
-                </p>
                 <label className="space-y-2 text-sm text-slate-700">
-                  Social media contact 1
+                  Social media contact 1 <span className="text-emerald-700">(required)</span>
                   <input
                     value={socialMedia1}
                     onChange={(event) => setSocialMedia1(event.target.value)}
                     type="text"
-                    placeholder="WhatsApp / Instagram / Telegram"
+                    placeholder="WhatsApp: 0712xxxxxx or Instagram: @username"
                     className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
                   />
                 </label>
                 <label className="space-y-2 text-sm text-slate-700">
-                  Social media contact 2
+                  Social media contact 2 <span className="text-emerald-700">(required)</span>
                   <input
                     value={socialMedia2}
                     onChange={(event) => setSocialMedia2(event.target.value)}
                     type="text"
-                    placeholder="Instagram / Telegram / Twitter"
+                    placeholder="Telegram: @username or Twitter: @username"
                     className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
                   />
                 </label>
