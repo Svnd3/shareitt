@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { serviceEmojiMap } from "../data/defaultFamilies";
 
 const getBrandLogo = (serviceName) => {
   const brandMap = {
@@ -47,11 +46,26 @@ export default function ServiceCard({ family }) {
   const [isMember, setIsMember] = useState(false);
   const [checking, setChecking] = useState(true);
   const [flagOpen, setFlagOpen] = useState(false);
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+  const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
+  const [editingUnique, setEditingUnique] = useState(false);
+  const [savingUnique, setSavingUnique] = useState(false);
 
-  const flagOptions = ["Inactive or scam listing", "Wrong price or details", "Other issue"];
+  const familyUniqueName = family.unique_name ?? "";
+  const safeUniqueName = uniqueName ?? "";
+
+  const flagOptions = [
+    "Inactive or scam listing",
+    "Wrong price or details",
+    "Other issue",
+  ];
+
   const handleFlag = (reason) => {
     const waMsg = `Hi ShareIt, I'd like to flag this listing:\n\nService: ${family.service_name}\nHost: ${family.host_name}\nReason: ${reason}`;
-    window.open(`https://wa.me/254741401230?text=${encodeURIComponent(waMsg)}`, "_blank");
+    window.open(
+      `https://wa.me/254741401230?text=${encodeURIComponent(waMsg)}`,
+      "_blank",
+    );
     setFlagOpen(false);
   };
 
@@ -69,10 +83,7 @@ export default function ServiceCard({ family }) {
           setChecking(false);
           return;
         }
-
-        if (mounted) {
-          setIsHost(userId === family.created_by);
-        }
+        if (mounted) setIsHost(userId === family.created_by);
 
         const { data: memberData, error } = await supabase
           .from("members")
@@ -81,9 +92,7 @@ export default function ServiceCard({ family }) {
           .eq("user_id", userId)
           .maybeSingle();
 
-        if (mounted) {
-          setIsMember(Boolean(memberData && !error));
-        }
+        if (mounted) setIsMember(Boolean(memberData && !error));
       } catch (e) {
         // ignore
       } finally {
@@ -97,72 +106,73 @@ export default function ServiceCard({ family }) {
     };
   }, [family.id, family.created_by]);
 
+  useEffect(() => {
+    setLogoLoadFailed(false);
+  }, [family.service_name]);
+
   const slotsLeft = family.total_slots - family.filled_slots;
   const slotBadge =
     slotsLeft <= 1
       ? "bg-red-100 text-red-800"
       : "bg-emerald-100 text-emerald-900";
   const primaryLogo = getBrandLogo(family.service_name);
-  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
-
-  useEffect(() => {
-    setLogoLoadFailed(false);
-  }, [family.service_name]);
-
   const shouldShowFallbackLogo = logoLoadFailed || !primaryLogo;
-  const logoUrl = primaryLogo;
-  const logoAlt = primaryLogo ? `${family.service_name} logo` : "ShareIt logo";
   const remainingFunding = slotsLeft * family.price_per_slot;
-  const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
-  const safeUniqueName = uniqueName ?? "";
-  const familyUniqueName = family.unique_name ?? "";
-  const [editingUnique, setEditingUnique] = useState(false);
-  const [savingUnique, setSavingUnique] = useState(false);
+
   const reportMailto = `mailto:keninnofficial@gmail.com?subject=${encodeURIComponent(
     `Report issue for ${family.service_name}`,
   )}&body=${encodeURIComponent(
     `Hello ShareIt team,%0D%0A%0D%0AI would like to report an issue with the full group for ${family.service_name} hosted by ${family.host_name}.%0D%0A%0D%0AIssue:%0D%0A%0D%0ABest regards,%0D%0A`,
   )}`;
-  const showReport = family.filled_slots >= family.total_slots;
 
   return (
-    <article className="relative rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+    <article className="relative rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg flex flex-col">
       {/* Flag button */}
       <div className="absolute top-4 right-4 z-10">
-        <button onClick={() => setFlagOpen((v) => !v)} title="Flag this listing" className="text-slate-300 hover:text-rose-400 transition text-base leading-none">🚩</button>
+        <button
+          onClick={() => setFlagOpen((v) => !v)}
+          title="Flag this listing"
+          className="text-slate-300 hover:text-rose-400 transition text-base leading-none"
+        >
+          🚩
+        </button>
         {flagOpen && (
           <div className="absolute right-0 top-7 w-52 rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden z-20">
             {flagOptions.map((reason) => (
-              <button key={reason} onClick={() => handleFlag(reason)} className="w-full px-4 py-2.5 text-left text-xs text-slate-700 hover:bg-slate-50 transition">{reason}</button>
+              <button
+                key={reason}
+                onClick={() => handleFlag(reason)}
+                className="w-full px-4 py-2.5 text-left text-xs text-slate-700 hover:bg-slate-50 transition"
+              >
+                {reason}
+              </button>
             ))}
           </div>
         )}
       </div>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-slate-100">
-            {shouldShowFallbackLogo ? (
-              <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xl">
-                {family.service_name?.[0]?.toUpperCase() || "S"}
-              </div>
-            ) : (
-              <img
-                src={logoUrl}
-                alt={logoAlt}
-                onError={() => setLogoLoadFailed(true)}
-                className="h-full w-full rounded-full bg-white object-contain p-2"
-              />
-            )}
-          </div>
+
+      {/* Logo + slots */}
+      <div className="flex items-center justify-between gap-4 pr-6">
+        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-slate-100">
+          {shouldShowFallbackLogo ? (
+            <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xl">
+              {family.service_name?.[0]?.toUpperCase() || "S"}
+            </div>
+          ) : (
+            <img
+              src={primaryLogo}
+              alt={`${family.service_name} logo`}
+              onError={() => setLogoLoadFailed(true)}
+              className="h-full w-full rounded-full bg-white object-contain p-2"
+            />
+          )}
         </div>
-        <div className="flex flex-col gap-1 text-right text-sm text-slate-500">
-          <span className="font-semibold text-slate-900">
-            KSh {family.price_per_slot}
-          </span>
+        <div className="text-right text-sm text-slate-500">
           <span>{family.total_slots} slots</span>
         </div>
       </div>
 
+      {/* Info */}
       <div className="mt-5 space-y-2">
         <h3 className="text-xl font-semibold text-slate-950">
           {family.service_name}
@@ -174,6 +184,7 @@ export default function ServiceCard({ family }) {
             <span className="text-slate-500">No family name set</span>
           )}
         </div>
+
         {isHost && (
           <div className="mt-2">
             {editingUnique ? (
@@ -181,10 +192,8 @@ export default function ServiceCard({ family }) {
                 <input
                   value={uniqueName}
                   onChange={(e) => setUniqueName(e.target.value)}
-                  onKeyDown={async (e) => {
-                    if (e.key === "Enter") {
-                      e.currentTarget.blur();
-                    }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
                     if (e.key === "Escape") {
                       setUniqueName(familyUniqueName);
                       setEditingUnique(false);
@@ -225,24 +234,24 @@ export default function ServiceCard({ family }) {
                 )}
               </div>
             ) : (
-              <div>
-                <button
-                  onClick={() => setEditingUnique(true)}
-                  className="text-sm text-slate-600 underline"
-                >
-                  {uniqueName ? "Edit family name" : "Set family name"}
-                </button>
-              </div>
+              <button
+                onClick={() => setEditingUnique(true)}
+                className="text-sm text-slate-600 underline"
+              >
+                {uniqueName ? "Edit family name" : "Set family name"}
+              </button>
             )}
           </div>
         )}
+
         <p className="text-sm text-slate-600">
           Hosted by{" "}
           <span className="font-medium text-slate-900">{family.host_name}</span>
         </p>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2 text-sm">
+      {/* Badges */}
+      <div className="mt-5 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
         <span
           className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${
             family.is_active_host
@@ -260,12 +269,14 @@ export default function ServiceCard({ family }) {
             : `${slotsLeft} slot${slotsLeft === 1 ? "" : "s"} left`}
         </span>
       </div>
+
       {family.payment_due === true && (
         <p className="text-xs text-amber-600 mt-1">
           ⚠ Host payment due — listing may become inactive soon
         </p>
       )}
 
+      {/* Funding info */}
       <div className="mt-4 rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
         {slotsLeft > 0 ? (
           <p>
@@ -280,6 +291,7 @@ export default function ServiceCard({ family }) {
         )}
       </div>
 
+      {/* Actions */}
       <div className="mt-6 flex flex-wrap gap-3">
         {slotsLeft <= 0 ? (
           <>
@@ -304,7 +316,7 @@ export default function ServiceCard({ family }) {
         ) : (
           <Link
             to={`/join/${family.id}`}
-            className="inline-flex items-center justify-center rounded-full bg-[#1A7A3C] px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-full bg-[#1A7A3C] px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
           >
             Join Family
           </Link>
@@ -318,7 +330,13 @@ export default function ServiceCard({ family }) {
           </a>
         )}
       </div>
-      
+
+      {/* Price — bottom right */}
+      <div className="mt-4 flex justify-end">
+        <span className="text-sm font-semibold text-slate-900">
+          KSh {family.price_per_slot}
+        </span>
+      </div>
     </article>
   );
 }

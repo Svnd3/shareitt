@@ -21,10 +21,10 @@ export default function Footer() {
               <p>Contact</p>
               <p>
                 <a
-                  href="mailto:hello@shareit.co.ke"
+                  href="mailto:keninnofficial@gmail.com"
                   className="transition hover:text-white"
                 >
-                  hello@shareit.co.ke
+                  keninnofficial@gmail.com
                 </a>
               </p>
               <p>

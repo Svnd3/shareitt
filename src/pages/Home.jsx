@@ -60,7 +60,14 @@ export default function Home({ session, authLoading }) {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [suggestionsVisible, setSuggestionsVisible] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const searchContainerRef = useRef(null);
+
+  const activeFilterCount = [
+    activeService !== "All",
+    priceFilter !== "All",
+    slotFilter !== "All",
+  ].filter(Boolean).length;
 
   const notice = location.state?.notice;
 
@@ -494,45 +501,61 @@ export default function Home({ session, authLoading }) {
             )}
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => setIsFilterSheetOpen(true)}
+            className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 md:hidden w-full"
+          >
+            <span className="inline-flex items-center gap-2">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <path d="M4 4h16M7 12h10M10 20h4" />
+              </svg>
+              Filter
+            </span>
+            <span className="rounded-full bg-[#1A7A3C] px-2.5 py-1 text-[10px] font-bold text-white">
+              {activeFilterCount}
+            </span>
+          </button>
+
+          <div className="hidden gap-3 md:grid md:grid-cols-3">
             <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                 Filter by service
               </p>
-              <div className="mt-3 relative">
-                <div className="overflow-x-auto pb-2 hide-scrollbar">
-                  <div className="flex gap-2 whitespace-nowrap">
-                    {filters.map((item) => (
-                      <button
-                        key={item}
-                        onClick={() => setActiveService(item)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                          activeService === item
-                            ? "bg-[#1A7A3C] text-white"
-                            : "border border-slate-200 bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {item}
-                      </button>
-                    ))}
-                  </div>
+              <div className="mt-3">
+                <div className="flex flex-wrap gap-2">
+                  {filters.map((item) => (
+                    <button
+                      key={item}
+                      onClick={() => setActiveService(item)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        activeService === item
+                          ? "bg-[#1A7A3C] text-white"
+                          : "border border-slate-200 bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
                 </div>
-                <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent md:hidden" />
               </div>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                 Filter by price
               </p>
-              <div className="mt-3 relative">
-                <div className="overflow-x-auto pb-2 hide-scrollbar">
-                  <div className="flex gap-2 whitespace-nowrap">
-                    {[
-                      "All",
-                      "Under KSh 200",
-                      "KSh 200–400",
-                      "Above KSh 400",
-                    ].map((option) => (
+              <div className="mt-3">
+                <div className="flex flex-wrap gap-2">
+                  {["All", "Under KSh 200", "KSh 200–400", "Above KSh 400"].map(
+                    (option) => (
                       <button
                         key={option}
                         onClick={() => setPriceFilter(option)}
@@ -544,45 +567,135 @@ export default function Home({ session, authLoading }) {
                       >
                         {option}
                       </button>
-                    ))}
-                  </div>
+                    ),
+                  )}
                 </div>
-                <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent md:hidden" />
               </div>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                 Filter by slots left
               </p>
-              <div className="mt-3 relative">
-                <div className="overflow-x-auto pb-2 hide-scrollbar">
-                  <div className="flex gap-2 whitespace-nowrap">
-                    {["All", "1 slot", "2-3 slots", "4+ slots"].map(
-                      (option) => (
-                        <button
-                          key={option}
-                          onClick={() => setSlotFilter(option)}
-                          className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                            slotFilter === option
-                              ? "bg-[#1A7A3C] text-white"
-                              : "border border-slate-200 bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ),
-                    )}
-                  </div>
+              <div className="mt-3">
+                <div className="flex flex-wrap gap-2">
+                  {["All", "1 slot", "2-3 slots", "4+ slots"].map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => setSlotFilter(option)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        slotFilter === option
+                          ? "bg-[#1A7A3C] text-white"
+                          : "border border-slate-200 bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
                 </div>
-                <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent md:hidden" />
               </div>
             </div>
           </div>
 
-          <div
-            id="listings"
-            className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
-          >
+          {isFilterSheetOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-end bg-slate-950/40 px-4 py-4 md:hidden"
+              onClick={() => setIsFilterSheetOpen(false)}
+            >
+              <div
+                className="w-full max-w-xl overflow-hidden rounded-t-3xl bg-white shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-950">
+                      Filters
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Select service, price, and slots.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterSheetOpen(false)}
+                    className="rounded-full border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="space-y-4 px-4 py-4">
+                  <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                      Filter by service
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {filters.map((item) => (
+                        <button
+                          key={item}
+                          onClick={() => setActiveService(item)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                            activeService === item
+                              ? "bg-[#1A7A3C] text-white"
+                              : "border border-slate-200 bg-white text-slate-700"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                      Filter by price
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "All",
+                        "Under KSh 200",
+                        "KSh 200–400",
+                        "Above KSh 400",
+                      ].map((option) => (
+                        <button
+                          key={option}
+                          onClick={() => setPriceFilter(option)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                            priceFilter === option
+                              ? "bg-[#1A7A3C] text-white"
+                              : "border border-slate-200 bg-white text-slate-700"
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                      Filter by slots left
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {["All", "1 slot", "2-3 slots", "4+ slots"].map(
+                        (option) => (
+                          <button
+                            key={option}
+                            onClick={() => setSlotFilter(option)}
+                            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                              slotFilter === option
+                                ? "bg-[#1A7A3C] text-white"
+                                : "border border-slate-200 bg-white text-slate-700"
+                            }`}
+                          >
+                            {option}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div id="listings" className="grid gap-3 grid-cols-2 xl:grid-cols-3">
             {loading ? (
               <SkeletonGrid count={6} />
             ) : collection.length === 0 ? (
@@ -673,22 +786,22 @@ export default function Home({ session, authLoading }) {
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-md">
         <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
           <p className="text-sm font-bold text-slate-900">Ready to save?</p>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="flex gap-2">
             <Link
               to="/host"
-              className="rounded-full bg-[#1A7A3C] px-4 py-2.5 text-center text-xs font-bold text-white transition hover:bg-emerald-600"
+              className="flex-1 min-w-0 rounded-full bg-[#1A7A3C] px-4 py-2.5 text-center text-xs font-bold text-white transition hover:bg-emerald-600"
             >
               Host
             </Link>
             <a
               href="#listings"
-              className="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-center text-xs font-bold text-slate-900 transition hover:bg-slate-50"
+              className="flex-1 min-w-0 rounded-full border border-slate-300 bg-white px-4 py-2.5 text-center text-xs font-bold text-slate-900 transition hover:bg-slate-50"
             >
               Join
             </a>
             <Link
               to="/report"
-              className="rounded-full border border-slate-300 bg-slate-100 px-4 py-2.5 text-center text-xs font-bold text-slate-900 transition hover:bg-slate-50"
+              className="flex-1 min-w-0 rounded-full border border-slate-300 bg-slate-100 px-4 py-2.5 text-center text-xs font-bold text-slate-900 transition hover:bg-slate-50"
             >
               Report
             </Link>
