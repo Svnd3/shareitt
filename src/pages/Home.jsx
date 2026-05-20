@@ -1,18 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase, hasSupabaseConfig } from "../lib/supabaseClient";
 import { useToast } from "../components/ToastProvider";
 import ServiceCard from "../components/ServiceCard";
 import FAQ from "../components/FAQ";
 import QuickPairing from "../components/QuickPairing";
-import TrustBanner from "../components/TrustBanner";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ShareItLogo from "../assets/shareitlogo.png";
 import SpotifyImg from "../assets/spotify.jpg";
 import NetflixImg from "../assets/netflix.jpg";
 import ChatGPTImg from "../assets/chatgpt.jpg";
 import PrimeImg from "../assets/prime.jpg";
-import SkeletonCard, { SkeletonGrid } from "../components/SkeletonCard";
+import { SkeletonGrid } from "../components/SkeletonCard";
 
 const filters = [
   "All",
@@ -25,6 +24,8 @@ const filters = [
   "Prime",
 ];
 
+const serviceSuggestions = filters.filter((item) => item !== "All");
+
 const slides = [
   { title: "Spotify Premium" },
   { title: "Netflix Standard" },
@@ -33,8 +34,24 @@ const slides = [
 ];
 
 export default function Home({ session, authLoading }) {
+  const toast = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const initialService = (() => {
+    const params = new URLSearchParams(location.search);
+    const serviceParam = params.get("service");
+    if (!serviceParam) return "All";
+    const normalizedRequest = serviceParam.toLowerCase().replace(/\s+/g, "");
+    const matched = filters.find(
+      (item) =>
+        item !== "All" &&
+        item.toLowerCase().replace(/\s+/g, "").includes(normalizedRequest),
+    );
+    return matched || "All";
+  })();
+
   const [families, setFamilies] = useState([]);
-  const [activeService, setActiveService] = useState("All");
+  const [activeService, setActiveService] = useState(initialService);
   const [priceFilter, setPriceFilter] = useState("All");
   const [slotFilter, setSlotFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,16 +59,35 @@ export default function Home({ session, authLoading }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
-  const toast = useToast();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [suggestionsVisible, setSuggestionsVisible] = useState(false);
+  const searchContainerRef = useRef(null);
 
   const notice = location.state?.notice;
 
+  const handleSearch = (term = searchTerm.trim()) => {
+    const query = term.trim();
+    setSearchQuery(query);
+    setSuggestionsVisible(false);
+  };
+
+  const filteredSuggestions = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return [];
+    return serviceSuggestions.filter((service) =>
+      service.toLowerCase().includes(query),
+    );
+  }, [searchTerm]);
+
   const handleShareApp = async () => {
+    const serviceSlug =
+      activeService !== "All"
+        ? activeService.toLowerCase().replace(/\s+/g, "")
+        : "";
+    const shareUrl = `${window.location.origin}${
+      serviceSlug ? `/?service=${encodeURIComponent(serviceSlug)}` : ""
+    }`;
     const shareText =
       "Save on subscriptions with ShareIt Kenya. Browse live family listings, pay a KSh 90 reliability fee, and join WhatsApp groups to share services together. ";
-    const shareUrl = window.location.origin;
     const sharePayload = {
       title: "ShareIt — Kenya subscription families",
       text: `${shareText}${shareUrl}`,
@@ -80,6 +116,20 @@ export default function Home({ session, authLoading }) {
       setCurrentSlide((current) => (current + 1) % slides.length);
     }, 3000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target)
+      ) {
+        setSuggestionsVisible(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -285,25 +335,7 @@ export default function Home({ session, authLoading }) {
           </div>
         )}
 
-        <div className="mb-4 flex justify-end">
-          <Link
-            to="/how-it-works"
-            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
-          >
-            How it works →
-          </Link>
-        </div>
-
         <section className="space-y-4 mb-4">
-          <div className="rounded-3xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 shadow-sm">
-            <span className="mr-2">🛡️</span>
-            Your safety matters — pay a one-time KSh 90 reliability fee via
-            M-Pesa to 0741401230 before joining. This protects hosts and keeps
-            our community trusted.
-          </div>
-          <h1 className="text-2xl font-bold text-slate-950">
-            Stop overpaying for subscriptions.
-          </h1>
           <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-md">
             <div className="relative h-48 w-full overflow-hidden bg-slate-300">
               {[SpotifyImg, NetflixImg, ChatGPTImg, PrimeImg].map(
@@ -377,22 +409,66 @@ export default function Home({ session, authLoading }) {
           </div>
         </section>
 
+        <section className="space-y-4 mb-4">
+          <div className="rounded-3xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 shadow-sm">
+            <span className="mr-2">🛡️</span>
+            Your safety matters — pay a one-time KSh 90 reliability fee via
+            M-Pesa to 0741401230 before joining. This protects hosts and keeps
+            our community trusted.
+          </div>
+          <h1 className="text-2xl font-bold text-slate-950">
+            Stop overpaying for subscriptions.
+          </h1>
+        </section>
+
         <QuickPairing />
         <section className="space-y-4 py-4">
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
-              <label className="relative block w-full">
-                <span className="sr-only">Search families</span>
-                <input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search families, services, or hosts"
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
+              <div ref={searchContainerRef} className="relative w-full">
+                <label className="block w-full">
+                  <span className="sr-only">Search families</span>
+                  <input
+                    value={searchTerm}
+                    onChange={(event) => {
+                      setSearchTerm(event.target.value);
+                      setSuggestionsVisible(true);
+                    }}
+                    onFocus={() => setSuggestionsVisible(true)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        handleSearch();
+                      }
+                    }}
+                    placeholder="Search families, services, or hosts"
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </label>
+                {suggestionsVisible && filteredSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg">
+                    <div className="divide-y divide-slate-200">
+                      {filteredSuggestions.map((service) => (
+                        <button
+                          key={service}
+                          type="button"
+                          onClick={() => {
+                            setSearchTerm(service);
+                            setActiveService(service);
+                            handleSearch(service);
+                          }}
+                          className="w-full px-4 py-3 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                        >
+                          {service}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
-                onClick={() => setSearchQuery(searchTerm.trim())}
+                onClick={handleSearch}
                 className="rounded-3xl bg-[#1A7A3C] px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
               >
                 Search
@@ -423,62 +499,82 @@ export default function Home({ session, authLoading }) {
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                 Filter by service
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {filters.map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => setActiveService(item)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                      activeService === item
-                        ? "bg-[#1A7A3C] text-white"
-                        : "border border-slate-200 bg-slate-100 text-slate-700"
-                    }`}
-                  >
-                    {item}
-                  </button>
-                ))}
+              <div className="mt-3 relative">
+                <div className="overflow-x-auto pb-2 hide-scrollbar">
+                  <div className="flex gap-2 whitespace-nowrap">
+                    {filters.map((item) => (
+                      <button
+                        key={item}
+                        onClick={() => setActiveService(item)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                          activeService === item
+                            ? "bg-[#1A7A3C] text-white"
+                            : "border border-slate-200 bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent md:hidden" />
               </div>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                 Filter by price
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {["All", "Under KSh 200", "KSh 200–400", "Above KSh 400"].map(
-                  (option) => (
-                    <button
-                      key={option}
-                      onClick={() => setPriceFilter(option)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        priceFilter === option
-                          ? "bg-[#1A7A3C] text-white"
-                          : "border border-slate-200 bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ),
-                )}
+              <div className="mt-3 relative">
+                <div className="overflow-x-auto pb-2 hide-scrollbar">
+                  <div className="flex gap-2 whitespace-nowrap">
+                    {[
+                      "All",
+                      "Under KSh 200",
+                      "KSh 200–400",
+                      "Above KSh 400",
+                    ].map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => setPriceFilter(option)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                          priceFilter === option
+                            ? "bg-[#1A7A3C] text-white"
+                            : "border border-slate-200 bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent md:hidden" />
               </div>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                 Filter by slots left
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {["All", "1 slot", "2-3 slots", "4+ slots"].map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => setSlotFilter(option)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                      slotFilter === option
-                        ? "bg-[#1A7A3C] text-white"
-                        : "border border-slate-200 bg-slate-100 text-slate-700"
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
+              <div className="mt-3 relative">
+                <div className="overflow-x-auto pb-2 hide-scrollbar">
+                  <div className="flex gap-2 whitespace-nowrap">
+                    {["All", "1 slot", "2-3 slots", "4+ slots"].map(
+                      (option) => (
+                        <button
+                          key={option}
+                          onClick={() => setSlotFilter(option)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                            slotFilter === option
+                              ? "bg-[#1A7A3C] text-white"
+                              : "border border-slate-200 bg-slate-100 text-slate-700"
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </div>
+                <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent md:hidden" />
               </div>
             </div>
           </div>
@@ -498,6 +594,28 @@ export default function Home({ session, authLoading }) {
                 <ServiceCard key={family.id} family={family} />
               ))
             )}
+          </div>
+        </section>
+
+        <section className="space-y-4 py-8">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-950">
+                  How it works
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Learn how ShareIt helps you save with trusted groups and what
+                  you need to do before joining.
+                </p>
+              </div>
+              <Link
+                to="/how-it-works"
+                className="inline-flex items-center justify-center rounded-full bg-[#1A7A3C] px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+              >
+                View the process →
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -548,7 +666,6 @@ export default function Home({ session, authLoading }) {
             </div>
           </div>
         </section>
-        <TrustBanner />
         <FAQ />
         <div className="h-8" />
       </div>

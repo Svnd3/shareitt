@@ -46,6 +46,14 @@ export default function ServiceCard({ family }) {
   const [isHost, setIsHost] = useState(false);
   const [isMember, setIsMember] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [flagOpen, setFlagOpen] = useState(false);
+
+  const flagOptions = ["Inactive or scam listing", "Wrong price or details", "Other issue"];
+  const handleFlag = (reason) => {
+    const waMsg = `Hi ShareIt, I'd like to flag this listing:\n\nService: ${family.service_name}\nHost: ${family.host_name}\nReason: ${reason}`;
+    window.open(`https://wa.me/254741401230?text=${encodeURIComponent(waMsg)}`, "_blank");
+    setFlagOpen(false);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -118,7 +126,18 @@ export default function ServiceCard({ family }) {
   const showReport = family.filled_slots >= family.total_slots;
 
   return (
-    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+    <article className="relative rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+      {/* Flag button */}
+      <div className="absolute top-4 right-4 z-10">
+        <button onClick={() => setFlagOpen((v) => !v)} title="Flag this listing" className="text-slate-300 hover:text-rose-400 transition text-base leading-none">🚩</button>
+        {flagOpen && (
+          <div className="absolute right-0 top-7 w-52 rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden z-20">
+            {flagOptions.map((reason) => (
+              <button key={reason} onClick={() => handleFlag(reason)} className="w-full px-4 py-2.5 text-left text-xs text-slate-700 hover:bg-slate-50 transition">{reason}</button>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-slate-100">
@@ -227,11 +246,11 @@ export default function ServiceCard({ family }) {
         <span
           className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${
             family.is_active_host
-              ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+              ? "bg-sky-100 text-sky-800 border-sky-200"
               : "bg-slate-50 text-slate-600 border-slate-300"
           }`}
         >
-          {family.is_active_host ? "✓ Active Host" : "Pending Review"}
+          {family.is_active_host ? "✓ Verified" : "Pending Review"}
         </span>
         <span
           className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm ${slotBadge}`}
@@ -255,8 +274,8 @@ export default function ServiceCard({ family }) {
           </p>
         ) : (
           <p className="text-slate-600 font-medium">
-            🔔 This family is full — join the waitlist and we'll notify you
-            when a slot opens.
+            🔔 This family is full — join the waitlist and we'll notify you when
+            a slot opens.
           </p>
         )}
       </div>
@@ -299,6 +318,7 @@ export default function ServiceCard({ family }) {
           </a>
         )}
       </div>
+      
     </article>
   );
 }
