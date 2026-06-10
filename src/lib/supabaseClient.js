@@ -10,13 +10,23 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 // lock forever and freeze every subsequent auth/REST/function call. Force a
 // hard timeout on every request this client makes so the lock can never get
 // stuck.
+// AbortSignal.any() is too new to rely on (unsupported on older Safari/WebView
+// browsers, where it would throw synchronously and break every Supabase call).
+// Combine signals manually with a plain AbortController instead.
 const FETCH_TIMEOUT_MS = 15000;
 function fetchWithTimeout(input, init = {}) {
-  const timeoutSignal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
-  const signal = init.signal
-    ? AbortSignal.any([init.signal, timeoutSignal])
-    : timeoutSignal;
-  return fetch(input, { ...init, signal });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  const callerSignal = init.signal;
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  return fetch(input, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timeoutId),
+  );
 }
 
 function makeMockBuilder() {
