@@ -3,6 +3,22 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// supabase-js serializes auth operations (token exchange/refresh, sign-in,
+// etc.) behind an internal lock and only releases it once the underlying
+// fetch settles. The browser's fetch() never times out on its own, so a
+// single hung request (e.g. a cold-starting Supabase project) can hold that
+// lock forever and freeze every subsequent auth/REST/function call. Force a
+// hard timeout on every request this client makes so the lock can never get
+// stuck.
+const FETCH_TIMEOUT_MS = 15000;
+function fetchWithTimeout(input, init = {}) {
+  const timeoutSignal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
+  const signal = init.signal
+    ? AbortSignal.any([init.signal, timeoutSignal])
+    : timeoutSignal;
+  return fetch(input, { ...init, signal });
+}
+
 function makeMockBuilder() {
   const resp = () => Promise.resolve({ data: null, error: null });
   const builder = {
@@ -56,7 +72,10 @@ if (!hasSupabaseConfig) {
       // (e.g. a cold-starting Supabase project), it freezes the whole app.
       detectSessionInUrl: false,
     },
+    global: {
+      fetch: fetchWithTimeout,
+    },
   });
 }
 
-export { supabase, hasSupabaseConfig };
+export { supabase, hasSupabaseConfig, supabaseUrl, supabaseAnonKey };

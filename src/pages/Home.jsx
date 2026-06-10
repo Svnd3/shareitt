@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { supabase, hasSupabaseConfig } from "../lib/supabaseClient";
+import {
+  supabase,
+  hasSupabaseConfig,
+  supabaseUrl,
+  supabaseAnonKey,
+} from "../lib/supabaseClient";
 import { useToast } from "../components/ToastProvider";
 import ServiceCard from "../components/ServiceCard";
 import FAQ from "../components/FAQ";
@@ -144,29 +149,42 @@ export default function Home({ session, authLoading }) {
     let cancelled = false;
 
     const fetchFamilies = async () => {
+      if (!hasSupabaseConfig) {
+        setFamilies([]);
+        setLoading(false);
+        return;
+      }
+
       try {
-        const { data, error } = await supabase
-          .from("families")
-          .select(
+        // Bypass the supabase-js auth client for this read: "families" is
+        // publicly readable under RLS (using (true)), and going through
+        // supabase.from() would block on the client's internal auth lock if
+        // a session refresh / OAuth code exchange is hung elsewhere in the
+        // app — leaving this fetch stuck forever despite its own timeout.
+        const params = new URLSearchParams({
+          select:
             "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,created_by,created_at",
-          )
-          .eq("is_live", true)
-          .order("created_at", { ascending: false })
-          .abortSignal(AbortSignal.timeout(15000));
+          is_live: "eq.true",
+          order: "created_at.desc",
+        });
+        const response = await fetch(
+          `${supabaseUrl}/rest/v1/families?${params.toString()}`,
+          {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+            },
+            signal: AbortSignal.timeout(15000),
+          },
+        );
 
         if (cancelled) return;
 
-        if (error || !data) {
-          console.error("Home fetch families error:", error);
-          setFetchError(
-            error?.message ||
-              "Unable to load families from Supabase. Please check your environment and RLS policies.",
-          );
-          setFamilies([]);
-          setLoading(false);
-          return;
+        if (!response.ok) {
+          throw new Error(`Unable to load families (status ${response.status}).`);
         }
 
+        const data = await response.json();
         setFamilies(data);
         setFetchError("");
       } catch (error) {

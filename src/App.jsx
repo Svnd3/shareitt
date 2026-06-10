@@ -139,26 +139,33 @@ function AppRoutes() {
       const hashAccessToken = hashParams.get("access_token");
       const hashRefreshToken = hashParams.get("refresh_token");
 
+      const isCallback = Boolean(
+        code || (hashAccessToken && hashRefreshToken) || oauthErrorDescription,
+      );
+
       // detectSessionInUrl is off (see supabaseClient.js), so we exchange
       // the PKCE "code" / hash tokens ourselves with a hard timeout — a
       // hung exchange (e.g. a cold-starting Supabase project) would
       // otherwise block getSession() and every other Supabase call forever.
       let exchangeFailedMessage = "";
+      let sessionFromExchange = null;
       if (code) {
         try {
-          const { error: exchangeError } = await withTimeout(
-            supabase.auth.exchangeCodeForSession(code),
-            10000,
-            "Sign-in timed out. Please try again.",
-          );
+          const { data: exchangeData, error: exchangeError } =
+            await withTimeout(
+              supabase.auth.exchangeCodeForSession(code),
+              10000,
+              "Sign-in timed out. Please try again.",
+            );
           if (exchangeError) exchangeFailedMessage = exchangeError.message;
+          else sessionFromExchange = exchangeData?.session ?? null;
         } catch (e) {
           exchangeFailedMessage =
             e?.message || "Sign-in timed out. Please try again.";
         }
       } else if (hashAccessToken && hashRefreshToken) {
         try {
-          const { error: setErr } = await withTimeout(
+          const { data: setData, error: setErr } = await withTimeout(
             supabase.auth.setSession({
               access_token: hashAccessToken,
               refresh_token: hashRefreshToken,
@@ -167,6 +174,7 @@ function AppRoutes() {
             "Sign-in timed out. Please try again.",
           );
           if (setErr) exchangeFailedMessage = setErr.message;
+          else sessionFromExchange = setData?.session ?? null;
         } catch (e) {
           exchangeFailedMessage =
             e?.message || "Sign-in timed out. Please try again.";
@@ -175,7 +183,27 @@ function AppRoutes() {
 
       if (!mounted) return;
 
-      const { data } = await supabase.auth.getSession();
+      // getSession() awaits the same internal auth lock as the exchange
+      // call above — if that exchange hung, getSession() would hang too.
+      // Skip it when the exchange already gave us a session or failed.
+      let currentSession = sessionFromExchange;
+      if (!currentSession && !exchangeFailedMessage) {
+        try {
+          const { data } = await withTimeout(
+            supabase.auth.getSession(),
+            10000,
+            "Sign-in timed out. Please try again.",
+          );
+          currentSession = data?.session ?? null;
+        } catch (e) {
+          // Outside an OAuth callback, a hung session check shouldn't
+          // bounce a normal visitor to /auth — just treat it as signed out.
+          if (isCallback) {
+            exchangeFailedMessage =
+              e?.message || "Sign-in timed out. Please try again.";
+          }
+        }
+      }
       if (!mounted) return;
 
       const hasAuthParams =
@@ -191,7 +219,6 @@ function AppRoutes() {
         window.history.replaceState(null, "", window.location.pathname);
       }
 
-      const currentSession = data?.session ?? null;
       setSession(currentSession);
 
       if (currentSession?.user?.id) {

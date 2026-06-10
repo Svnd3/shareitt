@@ -1,14 +1,27 @@
-import { supabase } from "./supabaseClient";
+import { hasSupabaseConfig, supabaseUrl, supabaseAnonKey } from "./supabaseClient";
 
-const EMAIL_FUNCTION_NAME = "send-email";
+const EMAIL_FUNCTION_URL = `${supabaseUrl}/functions/v1/send-email`;
 
+// Raw fetch (not supabase.functions.invoke) — these are fire-and-forget
+// notifications that only need the anon key, and must not depend on the
+// main client's auth state/lock, which can be busy or hung after sign-in.
 async function invokeEmailFunction(type, payload) {
-  const { error } = await supabase.functions.invoke(EMAIL_FUNCTION_NAME, {
+  if (!hasSupabaseConfig) return;
+
+  const response = await fetch(EMAIL_FUNCTION_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      apikey: supabaseAnonKey,
+    },
     body: JSON.stringify({ type, payload }),
+    signal: AbortSignal.timeout(15000),
   });
 
-  if (error) {
-    throw error;
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.error || `Email request failed (${response.status}).`);
   }
 }
 
