@@ -8,13 +8,10 @@ import {
 } from "../lib/sendEmail";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../components/ToastProvider";
-
-function calculateMaintenanceFee(pricePerSlot, totalSlots) {
-  const totalValue = pricePerSlot * totalSlots;
-  if (totalValue > 1500) return 50;
-  if (totalValue >= 601) return 40;
-  return 30;
-}
+import Tooltip from "../components/Tooltip";
+import SocialHandleInput from "../components/SocialHandleInput";
+import { getEscrowTotal } from "../lib/maintenanceFee";
+import { SERVICE_NAME_OPTIONS } from "../lib/services";
 
 function LoadingOverlay({ message }) {
   return (
@@ -33,11 +30,15 @@ export default function Host() {
   const location = useLocation();
   const navigate = useNavigate();
   const [serviceName, setServiceName] = useState("");
+  const [serviceNameOption, setServiceNameOption] = useState("");
   const [hostName, setHostName] = useState("");
   const [hostPhone, setHostPhone] = useState("");
   const [pricePerSlot, setPricePerSlot] = useState("");
   const [totalSlots, setTotalSlots] = useState("");
   const [whatsappLink, setWhatsappLink] = useState("");
+  const [hostingMethod, setHostingMethod] = useState("whatsapp");
+  const [hostSocial1, setHostSocial1] = useState("");
+  const [socialFieldKey, setSocialFieldKey] = useState(0);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState(null);
@@ -384,7 +385,8 @@ export default function Host() {
       !hostName.trim() ||
       !hostPhone.trim() ||
       !pricePerSlot ||
-      !totalSlots
+      !totalSlots ||
+      !hostSocial1.trim()
     ) {
       setStatus("Please complete all required fields.");
       return;
@@ -403,7 +405,10 @@ export default function Host() {
         filled_slots: 0,
         is_verified: false,
         is_live: true,
-        whatsapp_group_link: whatsappLink,
+        whatsapp_group_link: hostingMethod === "whatsapp" ? whatsappLink : null,
+        hosting_method: hostingMethod,
+        host_social_1: hostSocial1.trim(),
+        host_email: session?.user?.email || null,
         created_by: session?.user?.id,
       },
     ]);
@@ -420,11 +425,15 @@ export default function Host() {
     setStatus("Family created.");
     setLoading(false);
     setServiceName("");
+    setServiceNameOption("");
     setHostName("");
     setHostPhone("");
     setPricePerSlot("");
     setTotalSlots("");
     setWhatsappLink("");
+    setHostingMethod("whatsapp");
+    setHostSocial1("");
+    setSocialFieldKey((key) => key + 1);
 
     if (session?.user?.email) {
       sendHostRegistrationEmail({
@@ -533,14 +542,37 @@ export default function Host() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <label className="space-y-2 text-sm text-slate-700">
               Service Name
-              <input
-                value={serviceName}
-                onChange={(event) => setServiceName(event.target.value)}
-                type="text"
-                placeholder="Netflix Standard"
+              <select
+                value={serviceNameOption}
+                onChange={(event) => {
+                  const option = event.target.value;
+                  setServiceNameOption(option);
+                  setServiceName(option === "Other" ? "" : option);
+                }}
                 className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-              />
+              >
+                <option value="" disabled>
+                  Select a service
+                </option>
+                {SERVICE_NAME_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </label>
+            {serviceNameOption === "Other" && (
+              <label className="space-y-2 text-sm text-slate-700">
+                Custom Service Name
+                <input
+                  value={serviceName}
+                  onChange={(event) => setServiceName(event.target.value)}
+                  type="text"
+                  placeholder="e.g. HBO Max"
+                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+            )}
             <label className="space-y-2 text-sm text-slate-700">
               Your Name
               <input
@@ -559,6 +591,16 @@ export default function Host() {
                 type="tel"
                 placeholder="+2547..."
                 className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+              />
+            </label>
+            <label className="space-y-2 text-sm text-slate-700">
+              Your Social Media{" "}
+              <span className="text-emerald-700">(required)</span>
+              <Tooltip content="Instagram, Telegram, X, Facebook, TikTok, Snapchat, or LinkedIn — helps members verify you" />
+              <SocialHandleInput
+                key={socialFieldKey}
+                onChange={setHostSocial1}
+                placeholder="@username"
               />
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -585,38 +627,90 @@ export default function Host() {
                 />
               </label>
             </div>
-            {Number(pricePerSlot) > 0 && Number(totalSlots) > 0 ? (
-              <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-slate-700">
-                <p className="text-xs uppercase tracking-[0.24em] text-emerald-700">
-                  Estimated monthly maintenance fee
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
-                  KSh{" "}
-                  {calculateMaintenanceFee(
-                    Number(pricePerSlot),
-                    Number(totalSlots),
-                  )}
-                  /month
-                </p>
-                <p className="mt-2 text-sm text-slate-500">
-                  First month is free. Fee applies from month 2 onwards.
-                </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Active hosts get a Verified badge that increases join
-                  requests.
-                </p>
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-slate-900">
+                Hosting method
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setHostingMethod("escrow")}
+                  className={`rounded-3xl border p-4 text-left transition ${
+                    hostingMethod === "escrow"
+                      ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200"
+                      : "border-slate-200 bg-slate-50"
+                  }`}
+                >
+                  <p className="font-semibold text-slate-950">
+                    ShareIt Escrow
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    Joiners pay ShareIt automatically (M-Pesa). ShareIt
+                    collects the service price plus a small ShareIt fee on
+                    your behalf.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHostingMethod("whatsapp")}
+                  className={`rounded-3xl border p-4 text-left transition ${
+                    hostingMethod === "whatsapp"
+                      ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200"
+                      : "border-slate-200 bg-slate-50"
+                  }`}
+                >
+                  <p className="font-semibold text-slate-950">
+                    WhatsApp Group
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    Joiners pay you directly outside the app. ShareIt only
+                    helps you connect — no payment handling, no ShareIt fee.
+                  </p>
+                </button>
               </div>
-            ) : null}
-            <label className="space-y-2 text-sm text-slate-700">
-              WhatsApp Group Link (optional)
-              <input
-                value={whatsappLink}
-                onChange={(event) => setWhatsappLink(event.target.value)}
-                type="url"
-                placeholder="https://chat.whatsapp.com/..."
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-              />
-            </label>
+            </div>
+
+            {hostingMethod === "whatsapp" ? (
+              <label className="space-y-2 text-sm text-slate-700">
+                WhatsApp Group Link (optional)
+                <input
+                  value={whatsappLink}
+                  onChange={(event) => setWhatsappLink(event.target.value)}
+                  type="url"
+                  placeholder="https://chat.whatsapp.com/..."
+                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+            ) : (
+              <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+                <p className="font-semibold">
+                  Automatic payments via ShareIt Escrow
+                </p>
+                <p className="mt-2 text-slate-700">
+                  Joiners pay ShareIt directly via M-Pesa. You don't need a
+                  WhatsApp group link for payments.
+                </p>
+                {Number(pricePerSlot) > 0 &&
+                  (() => {
+                    const { serviceAmount, maintenanceFee, total } =
+                      getEscrowTotal(pricePerSlot);
+                    return (
+                      <div className="mt-4 rounded-2xl bg-white p-4">
+                        <p className="font-semibold text-slate-900">
+                          Joiners will pay
+                        </p>
+                        <p className="mt-1 text-lg font-semibold text-slate-950">
+                          KSh {total}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          KSh {serviceAmount} service + KSh {maintenanceFee}{" "}
+                          ShareIt fee
+                        </p>
+                      </div>
+                    );
+                  })()}
+              </div>
+            )}
 
             <div className="space-y-3">
               <button

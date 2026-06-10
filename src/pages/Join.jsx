@@ -6,7 +6,9 @@ import { defaultFamilies } from "../data/defaultFamilies";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../components/ToastProvider";
 import Tooltip from "../components/Tooltip";
+import SocialHandleInput from "../components/SocialHandleInput";
 import HowItWorks from "../components/HowItWorks";
+import { getEscrowTotal } from "../lib/maintenanceFee";
 
 export default function Join() {
   const { familyId } = useParams();
@@ -21,6 +23,7 @@ export default function Join() {
   const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(false);
   const [joined, setJoined] = useState(false);
+  const [joinedMemberId, setJoinedMemberId] = useState(null);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const toast = useToast();
@@ -171,15 +174,19 @@ export default function Join() {
       return;
     }
 
-    const { error: insertError } = await supabase.from("members").insert({
-      family_id: family.id,
-      user_id: session?.user?.id,
-      name: name.trim(),
-      phone: trimmedPhone,
-      email: email.trim() || session?.user?.email || null,
-      social_media_1: socialMedia1.trim(),
-      social_media_2: socialMedia2.trim(),
-    });
+    const { data: insertedMember, error: insertError } = await supabase
+      .from("members")
+      .insert({
+        family_id: family.id,
+        user_id: session?.user?.id,
+        name: name.trim(),
+        phone: trimmedPhone,
+        email: email.trim() || session?.user?.email || null,
+        social_media_1: socialMedia1.trim(),
+        social_media_2: socialMedia2.trim(),
+      })
+      .select("id")
+      .single();
 
     if (insertError) {
       toast.showToast("Could not join this family. Please try again.", "error");
@@ -187,10 +194,12 @@ export default function Join() {
       return;
     }
 
-    await supabase
-      .from("families")
-      .update({ filled_slots: family.filled_slots + 1 })
-      .eq("id", family.id);
+    setJoinedMemberId(insertedMember?.id ?? null);
+
+    // Joiners aren't the family owner, so RLS blocks a direct update to
+    // families.filled_slots. This RPC atomically increments it (and only it)
+    // within bounds — see supabase_rls_policies.sql.
+    await supabase.rpc("increment_family_slot", { p_family_id: family.id });
 
     setFamily((current) =>
       current
@@ -345,10 +354,31 @@ export default function Join() {
               </p>
             </div>
             <div className="rounded-3xl bg-[#F1F8F4] p-5">
-              <p className="text-sm text-slate-600">Price per slot</p>
-              <p className="mt-2 text-lg font-semibold text-slate-950">
-                KSh {family.price_per_slot}
-              </p>
+              {family.hosting_method === "escrow" ? (
+                (() => {
+                  const { serviceAmount, maintenanceFee, total } =
+                    getEscrowTotal(family.price_per_slot);
+                  return (
+                    <>
+                      <p className="text-sm text-slate-600">Total to pay</p>
+                      <p className="mt-2 text-lg font-semibold text-slate-950">
+                        KSh {total}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        KSh {serviceAmount} service + KSh {maintenanceFee}{" "}
+                        ShareIt fee
+                      </p>
+                    </>
+                  );
+                })()
+              ) : (
+                <>
+                  <p className="text-sm text-slate-600">Price per slot</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">
+                    KSh {family.price_per_slot}
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -366,6 +396,19 @@ export default function Join() {
               </p>
             </div>
           </div>
+
+          {family.hosting_method === "whatsapp" && (
+            <div className="mt-6 rounded-3xl border border-amber-100 bg-amber-50 p-5 text-sm text-amber-900">
+              <p className="font-semibold">Direct payment to host</p>
+              <p className="mt-2 text-slate-700">
+                This family uses the WhatsApp Group method. Payments go
+                directly to the host outside ShareIt — ShareIt is not liable
+                for payment disputes for this family. ShareIt's role is only
+                to help you connect, so always verify the host's details
+                before sending money.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
@@ -386,7 +429,8 @@ export default function Join() {
                 <p className="font-semibold">Social confirmation required</p>
                 <p className="mt-2 text-slate-700">
                   Add at least two social media contacts so the host can confirm
-                  your profile. Use WhatsApp, Instagram, Telegram, or Twitter.
+                  your profile. Use Instagram, Telegram, X, Facebook, TikTok,
+                  Snapchat, or LinkedIn.
                 </p>
               </div>
 
@@ -438,25 +482,19 @@ export default function Join() {
                 <label className="space-y-2 text-sm text-slate-700">
                   Social media contact 1{" "}
                   <span className="text-emerald-700">(required)</span>
-                  <Tooltip content="WhatsApp, Instagram, Telegram, or Twitter for host verification" />
-                  <input
-                    value={socialMedia1}
-                    onChange={(event) => setSocialMedia1(event.target.value)}
-                    type="text"
-                    placeholder="WhatsApp: 0712xxxxxx or Instagram: @username"
-                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                  <Tooltip content="Instagram, Telegram, X, Facebook, TikTok, Snapchat, or LinkedIn for host verification" />
+                  <SocialHandleInput
+                    onChange={setSocialMedia1}
+                    placeholder="@username"
                   />
                 </label>
                 <label className="space-y-2 text-sm text-slate-700">
                   Social media contact 2{" "}
                   <span className="text-emerald-700">(required)</span>
                   <Tooltip content="A different platform for added verification" />
-                  <input
-                    value={socialMedia2}
-                    onChange={(event) => setSocialMedia2(event.target.value)}
-                    type="text"
-                    placeholder="Telegram: @username or Twitter: @username"
-                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                  <SocialHandleInput
+                    onChange={setSocialMedia2}
+                    placeholder="@username"
                   />
                 </label>
 
@@ -470,7 +508,7 @@ export default function Join() {
                   </button>
                 </div>
               </form>
-              {joined && family.whatsapp_group_link && (
+              {joined && family.hosting_method === "whatsapp" && family.whatsapp_group_link && (
                 <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
                   <p className="font-semibold">Next step</p>
                   <p className="mt-2">
@@ -487,6 +525,30 @@ export default function Join() {
                   </a>
                 </div>
               )}
+              {joined && family.hosting_method === "escrow" && (() => {
+                const { serviceAmount, maintenanceFee, total } =
+                  getEscrowTotal(family.price_per_slot);
+                return (
+                  <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+                    <p className="font-semibold">Next step: pay via ShareIt</p>
+                    <p className="mt-2 text-slate-700">
+                      Pay KSh {total} (KSh {serviceAmount} service + KSh{" "}
+                      {maintenanceFee} ShareIt fee) to activate your slot.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(`/pay-escrow/${family.id}`, {
+                          state: { family, memberId: joinedMemberId },
+                        })
+                      }
+                      className="mt-4 inline-flex rounded-full bg-[#1A7A3C] px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                    >
+                      Pay via ShareIt
+                    </button>
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>
