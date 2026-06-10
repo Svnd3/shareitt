@@ -154,7 +154,7 @@ function AppRoutes() {
           const { data: exchangeData, error: exchangeError } =
             await withTimeout(
               supabase.auth.exchangeCodeForSession(code),
-              10000,
+              20000,
               "Sign-in timed out. Please try again.",
             );
           if (exchangeError) exchangeFailedMessage = exchangeError.message;
@@ -170,7 +170,7 @@ function AppRoutes() {
               access_token: hashAccessToken,
               refresh_token: hashRefreshToken,
             }),
-            10000,
+            20000,
             "Sign-in timed out. Please try again.",
           );
           if (setErr) exchangeFailedMessage = setErr.message;
@@ -191,7 +191,7 @@ function AppRoutes() {
         try {
           const { data } = await withTimeout(
             supabase.auth.getSession(),
-            10000,
+            20000,
             "Sign-in timed out. Please try again.",
           );
           currentSession = data?.session ?? null;
