@@ -50,7 +50,11 @@ if (!hasSupabaseConfig) {
       flowType: "pkce",
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true,
+      // Handled manually in App.jsx with a timeout. supabase-js awaits its
+      // internal init (including the automatic code exchange this would
+      // trigger) before *every* auth/REST call — if that exchange hangs
+      // (e.g. a cold-starting Supabase project), it freezes the whole app.
+      detectSessionInUrl: false,
     },
   });
 }

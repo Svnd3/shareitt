@@ -20,6 +20,26 @@ import HowItWorksPage from "./pages/HowItWorks";
 import Footer from "./components/Footer";
 import { ToastProvider } from "./components/ToastProvider";
 
+// Rejects after `ms` if `promise` hasn't settled — used so a hung Supabase
+// auth request (e.g. a cold-starting project) can't freeze the app forever.
+function withTimeout(promise, ms, timeoutMessage) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(timeoutMessage || "Request timed out."));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 function ProtectedRoute({ children, authLoading, session }) {
   const location = useLocation();
 
@@ -105,10 +125,6 @@ function AppRoutes() {
     let mounted = true;
 
     const init = async () => {
-      // getSession() awaits Supabase's internal init, which (with
-      // detectSessionInUrl: true) consumes any access/refresh tokens or PKCE
-      // "code" param in the URL. Once it resolves, scrub those from the
-      // address bar so they don't linger in browser history.
       const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(
         window.location.hash.replace(/^#/, ""),
@@ -119,7 +135,45 @@ function AppRoutes() {
         hashParams.get("error_description") ||
         searchParams.get("error") ||
         hashParams.get("error");
-      const hadCode = searchParams.has("code");
+      const code = searchParams.get("code");
+      const hashAccessToken = hashParams.get("access_token");
+      const hashRefreshToken = hashParams.get("refresh_token");
+
+      // detectSessionInUrl is off (see supabaseClient.js), so we exchange
+      // the PKCE "code" / hash tokens ourselves with a hard timeout — a
+      // hung exchange (e.g. a cold-starting Supabase project) would
+      // otherwise block getSession() and every other Supabase call forever.
+      let exchangeFailedMessage = "";
+      if (code) {
+        try {
+          const { error: exchangeError } = await withTimeout(
+            supabase.auth.exchangeCodeForSession(code),
+            10000,
+            "Sign-in timed out. Please try again.",
+          );
+          if (exchangeError) exchangeFailedMessage = exchangeError.message;
+        } catch (e) {
+          exchangeFailedMessage =
+            e?.message || "Sign-in timed out. Please try again.";
+        }
+      } else if (hashAccessToken && hashRefreshToken) {
+        try {
+          const { error: setErr } = await withTimeout(
+            supabase.auth.setSession({
+              access_token: hashAccessToken,
+              refresh_token: hashRefreshToken,
+            }),
+            10000,
+            "Sign-in timed out. Please try again.",
+          );
+          if (setErr) exchangeFailedMessage = setErr.message;
+        } catch (e) {
+          exchangeFailedMessage =
+            e?.message || "Sign-in timed out. Please try again.";
+        }
+      }
+
+      if (!mounted) return;
 
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
@@ -150,16 +204,17 @@ function AppRoutes() {
         } else if (confirmed && currentPath === "/pay") {
           navigate("/", { replace: true });
         }
-      } else if (oauthErrorDescription || hadCode) {
+      } else if (oauthErrorDescription || exchangeFailedMessage) {
         // OAuth redirected back but no session resulted — either the
-        // provider/Supabase reported an error, or the PKCE code exchange
-        // failed (e.g. redirect URL not in Supabase's allow-list). Surface
-        // this on /auth instead of silently bouncing the user back.
+        // provider/Supabase reported an error, or the code/token exchange
+        // failed or timed out. Surface this on /auth instead of silently
+        // bouncing the user back.
         navigate("/auth", {
           replace: true,
           state: {
             authError:
               oauthErrorDescription ||
+              exchangeFailedMessage ||
               "Sign-in didn't complete. Please try again.",
           },
         });
