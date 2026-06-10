@@ -8,12 +8,14 @@ import {
   Navigate,
 } from "react-router-dom";
 import { supabase } from "./lib/supabaseClient";
+import { sendSignInEmail } from "./lib/sendEmail";
 import Home from "./pages/Home";
 import Join from "./pages/Join";
 import Host from "./pages/Host";
 import Report from "./pages/Report";
 import Auth from "./pages/Auth";
 import Pay from "./pages/Pay";
+import EscrowPay from "./pages/EscrowPay";
 import HowItWorksPage from "./pages/HowItWorks";
 import Footer from "./components/Footer";
 import { ToastProvider } from "./components/ToastProvider";
@@ -66,7 +68,6 @@ function AuthRoute({ children, authLoading, paymentConfirmed, session }) {
 }
 
 function AppRoutes() {
-  const location = useLocation();
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -94,26 +95,6 @@ function AppRoutes() {
     return confirmed;
   };
 
-  // Handle OAuth redirect params — runs only when URL has auth tokens
-  useEffect(() => {
-    const hasAuthParams =
-      location.search.includes("access_token") ||
-      location.search.includes("refresh_token") ||
-      location.search.includes("code") ||
-      location.search.includes("error") ||
-      location.hash.includes("access_token") ||
-      location.hash.includes("refresh_token");
-
-    if (!hasAuthParams) return;
-
-    supabase.auth
-      .getSessionFromUrl({ storeSession: true })
-      .catch((err) =>
-        console.error("Supabase auth redirect error:", err.message),
-      )
-      .finally(() => navigate(location.pathname, { replace: true }));
-  }, [location.hash, location.pathname, location.search, navigate]);
-
   // Main auth + payment init — runs once on mount
   useEffect(() => {
     if (!supabase.auth?.getSession) {
@@ -124,8 +105,37 @@ function AppRoutes() {
     let mounted = true;
 
     const init = async () => {
+      // getSession() awaits Supabase's internal init, which (with
+      // detectSessionInUrl: true) consumes any access/refresh tokens or PKCE
+      // "code" param in the URL. Once it resolves, scrub those from the
+      // address bar so they don't linger in browser history.
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(
+        window.location.hash.replace(/^#/, ""),
+      );
+
+      const oauthErrorDescription =
+        searchParams.get("error_description") ||
+        hashParams.get("error_description") ||
+        searchParams.get("error") ||
+        hashParams.get("error");
+      const hadCode = searchParams.has("code");
+
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
+
+      const hasAuthParams =
+        searchParams.has("access_token") ||
+        searchParams.has("refresh_token") ||
+        searchParams.has("code") ||
+        searchParams.has("error") ||
+        hashParams.has("access_token") ||
+        hashParams.has("refresh_token") ||
+        hashParams.has("error");
+
+      if (hasAuthParams) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
 
       const currentSession = data?.session ?? null;
       setSession(currentSession);
@@ -140,6 +150,19 @@ function AppRoutes() {
         } else if (confirmed && currentPath === "/pay") {
           navigate("/", { replace: true });
         }
+      } else if (oauthErrorDescription || hadCode) {
+        // OAuth redirected back but no session resulted — either the
+        // provider/Supabase reported an error, or the PKCE code exchange
+        // failed (e.g. redirect URL not in Supabase's allow-list). Surface
+        // this on /auth instead of silently bouncing the user back.
+        navigate("/auth", {
+          replace: true,
+          state: {
+            authError:
+              oauthErrorDescription ||
+              "Sign-in didn't complete. Please try again.",
+          },
+        });
       }
 
       // Auth loading is done — this is the only place we set it false
@@ -174,6 +197,15 @@ function AppRoutes() {
 
         // Only re-check payment on an actual new sign-in
         if (event === "SIGNED_IN") {
+          if (newSession.user.email) {
+            sendSignInEmail({
+              email: newSession.user.email,
+              name: newSession.user.user_metadata?.full_name,
+            }).catch((error) => {
+              console.error("Sign-in email failed:", error);
+            });
+          }
+
           const confirmed = await checkPaymentStatus(newSession.user.id);
           if (!mounted) return;
 
@@ -200,6 +232,7 @@ function AppRoutes() {
         element={<Home session={session} authLoading={authLoading} />}
       />
       <Route path="/join/:familyId" element={<Join />} />
+      <Route path="/pay-escrow/:familyId" element={<EscrowPay />} />
       <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route
         path="/host"

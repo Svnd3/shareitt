@@ -43,7 +43,16 @@ if (!hasSupabaseConfig) {
     },
   };
 } else {
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      // PKCE protects the OAuth/email-link exchange from authorization-code
+      // interception — the verifier never leaves this browser.
+      flowType: "pkce",
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
 }
 
 export { supabase, hasSupabaseConfig };
