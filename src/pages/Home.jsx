@@ -61,6 +61,7 @@ export default function Home({ session, authLoading }) {
   const [fetchError, setFetchError] = useState("");
   const [suggestionsVisible, setSuggestionsVisible] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [familyView, setFamilyView] = useState("available");
   const searchContainerRef = useRef(null);
 
   const activeFilterCount = [
@@ -228,18 +229,31 @@ export default function Home({ session, authLoading }) {
       }
     });
 
-    if (!searchQuery) return filteredBySlots;
+    const filteredByView = filteredBySlots.filter((family) =>
+      familyView === "full"
+        ? family.filled_slots >= family.total_slots
+        : family.filled_slots < family.total_slots,
+    );
+
+    if (!searchQuery) return filteredByView;
 
     const query = searchQuery.toLowerCase();
-    return filteredBySlots.filter(
+    return filteredByView.filter(
       (family) =>
         family.service_name.toLowerCase().includes(query) ||
         family.host_name.toLowerCase().includes(query),
     );
-  }, [activeService, families, priceFilter, searchQuery, slotFilter]);
+  }, [
+    activeService,
+    families,
+    familyView,
+    priceFilter,
+    searchQuery,
+    slotFilter,
+  ]);
 
-  const activeFamilies = collection.length;
-  const membersSaved = collection.reduce(
+  const activeFamilies = families.length;
+  const membersSaved = families.reduce(
     (sum, family) => sum + family.filled_slots,
     0,
   );
@@ -254,7 +268,7 @@ export default function Home({ session, authLoading }) {
     );
   }
   const servicesAvailable = new Set(
-    collection.map((family) => family.service_name.split(" ")[0]),
+    families.map((family) => family.service_name.split(" ")[0]),
   ).size;
 
   return (
@@ -501,6 +515,31 @@ export default function Home({ session, authLoading }) {
             )}
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setFamilyView("available")}
+              className={`rounded-3xl px-4 py-3 text-sm font-semibold transition ${
+                familyView === "available"
+                  ? "bg-[#1A7A3C] text-white"
+                  : "border border-slate-200 bg-white text-slate-700"
+              }`}
+            >
+              Available Families
+            </button>
+            <button
+              type="button"
+              onClick={() => setFamilyView("full")}
+              className={`rounded-3xl px-4 py-3 text-sm font-semibold transition ${
+                familyView === "full"
+                  ? "bg-[#1A7A3C] text-white"
+                  : "border border-slate-200 bg-white text-slate-700"
+              }`}
+            >
+              Existing Families
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => setIsFilterSheetOpen(true)}
@@ -701,7 +740,17 @@ export default function Home({ session, authLoading }) {
                 <SkeletonGrid count={6} />
               ) : collection.length === 0 ? (
                 <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-                  No families found.
+                  {familyView === "available" ? (
+                    <>
+                      No new families found. Click{" "}
+                      <Link to="/host" className="font-semibold text-emerald-700 hover:underline">
+                        Host
+                      </Link>{" "}
+                      to create your own.
+                    </>
+                  ) : (
+                    "No families found."
+                  )}
                 </div>
               ) : (
                 collection.map((family) => (
