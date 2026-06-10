@@ -1,4 +1,9 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
+import { sendViaResend } from "../_shared/resend.ts";
+
+// Sending from Resend's shared "onboarding@resend.dev" address until
+// shareit.app is verified at resend.com/domains. Once verified, switch
+// these "from" values back to "ShareIt <no-reply@shareit.app>".
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -37,7 +42,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
       }
 
       return {
-        from: "ShareIt <no-reply@shareit.app>",
+        from: "ShareIt <onboarding@resend.dev>",
         to,
         subject: `Your ${service_name} family is now live on ShareIt`,
         html: `
@@ -62,7 +67,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing membership request fields.");
       }
       return {
-        from: "ShareIt <no-reply@shareit.app>",
+        from: "ShareIt <onboarding@resend.dev>",
         to,
         subject: `You requested to join ${service_name} on ShareIt`,
         html: `
@@ -80,7 +85,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing payment confirmation fields.");
       }
       return {
-        from: "ShareIt <no-reply@shareit.app>",
+        from: "ShareIt <onboarding@resend.dev>",
         to,
         subject: "Payment confirmed — thank you for supporting ShareIt",
         html: `
@@ -100,7 +105,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing payment reminder fields.");
       }
       return {
-        from: "ShareIt <no-reply@shareit.app>",
+        from: "ShareIt <onboarding@resend.dev>",
         to,
         subject: `Reminder: pay your reliability fee for ${service_name}`,
         html: `
@@ -108,6 +113,68 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
           <p>This is a friendly reminder to complete the KSh 90 reliability fee for <strong>${String(service_name)}</strong> hosted by ${String(host_name)}.</p>
           <p>Once your payment is confirmed, you will remain in good standing with ShareIt and keep access to the family service.</p>
           <p>If you need help, reply to this email or contact your host directly.</p>
+        `,
+      };
+    }
+    case "welcome": {
+      const { to, name } = payload as Record<string, unknown>;
+      if (!to) {
+        throw new Error("Missing welcome email fields.");
+      }
+      return {
+        from: "ShareIt <onboarding@resend.dev>",
+        to,
+        subject: "Welcome to ShareIt!",
+        html: `
+          <p>Hi ${String(name || "there")},</p>
+          <p>Welcome to ShareIt — Kenya's marketplace for sharing subscription costs.</p>
+          <p>Next steps:</p>
+          <ul>
+            <li>Confirm your email address if you haven't already.</li>
+            <li>Pay the one-time KSh 90 reliability fee to activate your account.</li>
+            <li>Browse live families to join, or host your own for free.</li>
+          </ul>
+          <p>Thanks for joining ShareIt.</p>
+        `,
+      };
+    }
+    case "sign_in": {
+      const { to, name } = payload as Record<string, unknown>;
+      if (!to) {
+        throw new Error("Missing sign-in email fields.");
+      }
+      return {
+        from: "ShareIt <onboarding@resend.dev>",
+        to,
+        subject: "New sign-in to your ShareIt account",
+        html: `
+          <p>Hi ${String(name || "there")},</p>
+          <p>We noticed a new sign-in to your ShareIt account.</p>
+          <p>If this was you, no action is needed. If you don't recognize this activity, please reset your password right away.</p>
+        `,
+      };
+    }
+    case "escrow_payment_received": {
+      const {
+        to,
+        host_name,
+        member_name,
+        service_name,
+        amount,
+        mpesa_code,
+      } = payload as Record<string, unknown>;
+      if (!to || !member_name || !service_name || !amount || !mpesa_code) {
+        throw new Error("Missing escrow payment received fields.");
+      }
+      return {
+        from: "ShareIt <onboarding@resend.dev>",
+        to,
+        subject: `New escrow payment for ${service_name}`,
+        html: `
+          <p>Hi ${String(host_name || "there")},</p>
+          <p><strong>${String(member_name)}</strong> has paid <strong>KSh ${String(amount)}</strong> via ShareIt Escrow for <strong>${String(service_name)}</strong>.</p>
+          <p>M-Pesa code: <strong>${String(mpesa_code)}</strong></p>
+          <p>ShareIt will verify this payment and activate their slot shortly.</p>
         `,
       };
     }
@@ -120,7 +187,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing member removal fields.");
       }
       return {
-        from: "ShareIt <no-reply@shareit.app>",
+        from: "ShareIt <onboarding@resend.dev>",
         to,
         subject: `You were removed from ${service_name} on ShareIt`,
         html: `
@@ -184,23 +251,7 @@ serve(async (req) => {
   }
 
   try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(emailPayload),
-    });
-
-    const result = await response.json();
-    if (!response.ok) {
-      return jsonResponse(
-        { error: result?.error || "Resend API returned an error." },
-        502,
-      );
-    }
-
+    const result = await sendViaResend(apiKey, emailPayload);
     return jsonResponse({ success: true, result }, 200);
   } catch (error) {
     return jsonResponse(

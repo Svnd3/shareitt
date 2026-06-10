@@ -78,6 +78,50 @@ export async function sendPaymentReminderEmail({
   });
 }
 
+export async function sendWelcomeEmail({ email, name }) {
+  if (!email) {
+    throw new Error("Missing user email.");
+  }
+
+  await invokeEmailFunction("welcome", {
+    to: email,
+    name,
+  });
+}
+
+export async function sendSignInEmail({ email, name }) {
+  if (!email) {
+    throw new Error("Missing user email.");
+  }
+
+  await invokeEmailFunction("sign_in", {
+    to: email,
+    name,
+  });
+}
+
+export async function sendEscrowPaymentReceivedEmail({
+  email,
+  hostName,
+  memberName,
+  serviceName,
+  amount,
+  mpesaCode,
+}) {
+  if (!email) {
+    throw new Error("Missing host email.");
+  }
+
+  await invokeEmailFunction("escrow_payment_received", {
+    to: email,
+    host_name: hostName,
+    member_name: memberName,
+    service_name: serviceName,
+    amount,
+    mpesa_code: mpesaCode,
+  });
+}
+
 export async function sendMemberRemovedEmail({
   email,
   memberName,
