@@ -141,6 +141,8 @@ export default function Home({ session, authLoading }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchFamilies = async () => {
       try {
         const { data, error } = await supabase
@@ -149,7 +151,10 @@ export default function Home({ session, authLoading }) {
             "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,created_by,created_at",
           )
           .eq("is_live", true)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .abortSignal(AbortSignal.timeout(15000));
+
+        if (cancelled) return;
 
         if (error || !data) {
           console.error("Home fetch families error:", error);
@@ -165,18 +170,24 @@ export default function Home({ session, authLoading }) {
         setFamilies(data);
         setFetchError("");
       } catch (error) {
+        if (cancelled) return;
         console.error("Home fetch families exception:", error);
         setFetchError(
-          error?.message ||
-            "Unable to load families from Supabase. Please check your environment and RLS policies.",
+          error?.name === "AbortError" || error?.name === "TimeoutError"
+            ? "Loading families timed out. The database may be waking up — please refresh."
+            : error?.message ||
+                "Unable to load families from Supabase. Please check your environment and RLS policies.",
         );
         setFamilies([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchFamilies();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
