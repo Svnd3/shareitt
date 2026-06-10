@@ -1,9 +1,7 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import { sendViaResend } from "../_shared/resend.ts";
 
-// Sending from Resend's shared "onboarding@resend.dev" address until
-// shareit.app is verified at resend.com/domains. Once verified, switch
-// these "from" values back to "ShareIt <no-reply@shareit.app>".
+// Sent from shareitt.xyz, verified in Resend (resend.com/domains).
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +40,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
       }
 
       return {
-        from: "ShareIt <onboarding@resend.dev>",
+        from: "ShareIt <no-reply@shareitt.xyz>",
         to,
         subject: `Your ${service_name} family is now live on ShareIt`,
         html: `
@@ -67,7 +65,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing membership request fields.");
       }
       return {
-        from: "ShareIt <onboarding@resend.dev>",
+        from: "ShareIt <no-reply@shareitt.xyz>",
         to,
         subject: `You requested to join ${service_name} on ShareIt`,
         html: `
@@ -85,7 +83,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing payment confirmation fields.");
       }
       return {
-        from: "ShareIt <onboarding@resend.dev>",
+        from: "ShareIt <no-reply@shareitt.xyz>",
         to,
         subject: "Payment confirmed — thank you for supporting ShareIt",
         html: `
@@ -105,7 +103,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing payment reminder fields.");
       }
       return {
-        from: "ShareIt <onboarding@resend.dev>",
+        from: "ShareIt <no-reply@shareitt.xyz>",
         to,
         subject: `Reminder: pay your reliability fee for ${service_name}`,
         html: `
@@ -122,7 +120,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing welcome email fields.");
       }
       return {
-        from: "ShareIt <onboarding@resend.dev>",
+        from: "ShareIt <no-reply@shareitt.xyz>",
         to,
         subject: "Welcome to ShareIt!",
         html: `
@@ -144,7 +142,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing sign-in email fields.");
       }
       return {
-        from: "ShareIt <onboarding@resend.dev>",
+        from: "ShareIt <no-reply@shareitt.xyz>",
         to,
         subject: "New sign-in to your ShareIt account",
         html: `
@@ -167,7 +165,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing escrow payment received fields.");
       }
       return {
-        from: "ShareIt <onboarding@resend.dev>",
+        from: "ShareIt <no-reply@shareitt.xyz>",
         to,
         subject: `New escrow payment for ${service_name}`,
         html: `
@@ -187,7 +185,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         throw new Error("Missing member removal fields.");
       }
       return {
-        from: "ShareIt <onboarding@resend.dev>",
+        from: "ShareIt <no-reply@shareitt.xyz>",
         to,
         subject: `You were removed from ${service_name} on ShareIt`,
         html: `

@@ -6,9 +6,7 @@ import { sendViaResend } from "../_shared/resend.ts";
 // Sends a "payment confirmed" email to the joiner when staff flip
 // payment_confirmed from false to true.
 //
-// Sending from Resend's shared "onboarding@resend.dev" address until
-// shareit.app is verified at resend.com/domains. Once verified, switch
-// the "from" value back to "ShareIt <no-reply@shareit.app>".
+// Sent from shareitt.xyz, verified in Resend (resend.com/domains).
 serve(async (req) => {
   let body: Record<string, unknown>;
   try {
@@ -79,7 +77,7 @@ serve(async (req) => {
 
   try {
     await sendViaResend(resendApiKey, {
-      from: "ShareIt <onboarding@resend.dev>",
+      from: "ShareIt <no-reply@shareitt.xyz>",
       to: recipient,
       subject: `Payment confirmed for ${serviceName}`,
       html: `
