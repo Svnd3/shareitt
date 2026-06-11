@@ -24,6 +24,12 @@ const HAS_SOCIAL_OPTIONS =
 const HCAPTCHA_SITE_KEY = "6e2cd186-3970-468e-9502-0a58b80ea3ee";
 const HCAPTCHA_SCRIPT_SRC = "https://js.hcaptcha.com/1/api.js";
 
+// Password-reset emails always link back to the production site, regardless
+// of which origin (preview deploy, localhost, etc.) the request was sent
+// from — this must match an allow-listed Redirect URL in the Supabase
+// dashboard (Authentication > URL Configuration).
+const PASSWORD_RESET_REDIRECT = "https://shareitt.xyz/auth";
+
 // ── tiny SVG icons (inline, no extra dependency) ──────────────────────────
 const Spinner = () => (
   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -1081,7 +1087,7 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
       setLoading(true);
       const { error: e } = await supabase.auth.resetPasswordForEmail(
         normalizedEmail,
-        { redirectTo: `${appUrl}/auth`, captchaToken },
+        { redirectTo: PASSWORD_RESET_REDIRECT, captchaToken },
       );
       setLoading(false);
       resetCaptcha();
