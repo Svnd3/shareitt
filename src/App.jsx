@@ -102,14 +102,19 @@ function AppRoutes() {
       return false;
     }
 
-    const { data, error } = await supabase
-      .from("payments")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("payment_confirmed", true)
-      .limit(1);
+    let confirmed = false;
+    try {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("payment_confirmed", true)
+        .limit(1);
+      confirmed = !error && Array.isArray(data) && data.length > 0;
+    } catch (err) {
+      console.error("Payment status check failed:", err);
+    }
 
-    const confirmed = !error && Array.isArray(data) && data.length > 0;
     setPaymentConfirmed(confirmed);
     paymentConfirmedRef.current = confirmed;
     return confirmed;
@@ -143,69 +148,6 @@ function AppRoutes() {
         code || (hashAccessToken && hashRefreshToken) || oauthErrorDescription,
       );
 
-      // detectSessionInUrl is off (see supabaseClient.js), so we exchange
-      // the PKCE "code" / hash tokens ourselves with a hard timeout — a
-      // hung exchange (e.g. a cold-starting Supabase project) would
-      // otherwise block getSession() and every other Supabase call forever.
-      let exchangeFailedMessage = "";
-      let sessionFromExchange = null;
-      if (code) {
-        try {
-          const { data: exchangeData, error: exchangeError } =
-            await withTimeout(
-              supabase.auth.exchangeCodeForSession(code),
-              20000,
-              "Sign-in timed out. Please try again.",
-            );
-          if (exchangeError) exchangeFailedMessage = exchangeError.message;
-          else sessionFromExchange = exchangeData?.session ?? null;
-        } catch (e) {
-          exchangeFailedMessage =
-            e?.message || "Sign-in timed out. Please try again.";
-        }
-      } else if (hashAccessToken && hashRefreshToken) {
-        try {
-          const { data: setData, error: setErr } = await withTimeout(
-            supabase.auth.setSession({
-              access_token: hashAccessToken,
-              refresh_token: hashRefreshToken,
-            }),
-            20000,
-            "Sign-in timed out. Please try again.",
-          );
-          if (setErr) exchangeFailedMessage = setErr.message;
-          else sessionFromExchange = setData?.session ?? null;
-        } catch (e) {
-          exchangeFailedMessage =
-            e?.message || "Sign-in timed out. Please try again.";
-        }
-      }
-
-      if (!mounted) return;
-
-      // getSession() awaits the same internal auth lock as the exchange
-      // call above — if that exchange hung, getSession() would hang too.
-      // Skip it when the exchange already gave us a session or failed.
-      let currentSession = sessionFromExchange;
-      if (!currentSession && !exchangeFailedMessage) {
-        try {
-          const { data } = await withTimeout(
-            supabase.auth.getSession(),
-            20000,
-            "Sign-in timed out. Please try again.",
-          );
-          currentSession = data?.session ?? null;
-        } catch (e) {
-          // Outside an OAuth callback, a hung session check shouldn't
-          // bounce a normal visitor to /auth — just treat it as signed out.
-          if (isCallback) {
-            exchangeFailedMessage =
-              e?.message || "Sign-in timed out. Please try again.";
-          }
-        }
-      }
-      if (!mounted) return;
-
       const hasAuthParams =
         searchParams.has("access_token") ||
         searchParams.has("refresh_token") ||
@@ -215,41 +157,138 @@ function AppRoutes() {
         hashParams.has("refresh_token") ||
         hashParams.has("error");
 
+      // Codes/tokens are single-use. Strip them from the URL up front so
+      // that even if something below throws or hangs, a refresh starts
+      // clean (re-running getSession against the persisted session) instead
+      // of resending an already-consumed code and getting stuck forever.
       if (hasAuthParams) {
         window.history.replaceState(null, "", window.location.pathname);
       }
 
-      setSession(currentSession);
+      let exchangeFailedMessage = "";
+      let sessionFromExchange = null;
 
-      if (currentSession?.user?.id) {
-        const confirmed = await checkPaymentStatus(currentSession.user.id);
+      try {
+        // detectSessionInUrl is off (see supabaseClient.js), so we exchange
+        // the PKCE "code" / hash tokens ourselves with a hard timeout — a
+        // hung exchange (e.g. a cold-starting Supabase project) would
+        // otherwise block getSession() and every other Supabase call forever.
+        if (code) {
+          try {
+            const { data: exchangeData, error: exchangeError } =
+              await withTimeout(
+                supabase.auth.exchangeCodeForSession(code),
+                20000,
+                "Sign-in timed out. Please try again.",
+              );
+            if (exchangeError) {
+              console.error("exchangeCodeForSession error:", exchangeError);
+              exchangeFailedMessage = exchangeError.message;
+            } else {
+              sessionFromExchange = exchangeData?.session ?? null;
+            }
+          } catch (e) {
+            console.error("exchangeCodeForSession failed:", e);
+            exchangeFailedMessage =
+              e?.message || "Sign-in timed out. Please try again.";
+          }
+        } else if (hashAccessToken && hashRefreshToken) {
+          try {
+            const { data: setData, error: setErr } = await withTimeout(
+              supabase.auth.setSession({
+                access_token: hashAccessToken,
+                refresh_token: hashRefreshToken,
+              }),
+              20000,
+              "Sign-in timed out. Please try again.",
+            );
+            if (setErr) {
+              console.error("setSession error:", setErr);
+              exchangeFailedMessage = setErr.message;
+            } else {
+              sessionFromExchange = setData?.session ?? null;
+            }
+          } catch (e) {
+            console.error("setSession failed:", e);
+            exchangeFailedMessage =
+              e?.message || "Sign-in timed out. Please try again.";
+          }
+        }
+
         if (!mounted) return;
 
-        const currentPath = window.location.pathname;
-        if (!confirmed && currentPath !== "/pay") {
-          navigate("/pay", { replace: true });
-        } else if (confirmed && currentPath === "/pay") {
-          navigate("/", { replace: true });
+        // getSession() awaits the same internal auth lock as the exchange
+        // call above — if that exchange hung, getSession() would hang too.
+        // Skip it when the exchange already gave us a session or failed.
+        let currentSession = sessionFromExchange;
+        if (!currentSession && !exchangeFailedMessage) {
+          try {
+            const { data } = await withTimeout(
+              supabase.auth.getSession(),
+              20000,
+              "Sign-in timed out. Please try again.",
+            );
+            currentSession = data?.session ?? null;
+          } catch (e) {
+            console.error("getSession failed:", e);
+            // Outside an OAuth callback, a hung session check shouldn't
+            // bounce a normal visitor to /auth — just treat it as signed out.
+            if (isCallback) {
+              exchangeFailedMessage =
+                e?.message || "Sign-in timed out. Please try again.";
+            }
+          }
         }
-      } else if (oauthErrorDescription || exchangeFailedMessage) {
-        // OAuth redirected back but no session resulted — either the
-        // provider/Supabase reported an error, or the code/token exchange
-        // failed or timed out. Surface this on /auth instead of silently
-        // bouncing the user back.
-        navigate("/auth", {
-          replace: true,
-          state: {
-            authError:
-              oauthErrorDescription ||
-              exchangeFailedMessage ||
-              "Sign-in didn't complete. Please try again.",
-          },
-        });
-      }
+        if (!mounted) return;
 
-      // Auth loading is done — this is the only place we set it false
-      setAuthLoading(false);
-      initDone.current = true;
+        setSession(currentSession);
+
+        if (currentSession?.user?.id) {
+          const confirmed = await checkPaymentStatus(currentSession.user.id);
+          if (!mounted) return;
+
+          const currentPath = window.location.pathname;
+          if (!confirmed && currentPath !== "/pay") {
+            navigate("/pay", { replace: true });
+          } else if (confirmed && currentPath === "/pay") {
+            navigate("/", { replace: true });
+          }
+        } else if (oauthErrorDescription || exchangeFailedMessage) {
+          // OAuth redirected back but no session resulted — either the
+          // provider/Supabase reported an error, or the code/token exchange
+          // failed or timed out. Surface this on /auth instead of silently
+          // bouncing the user back.
+          navigate("/auth", {
+            replace: true,
+            state: {
+              authError:
+                oauthErrorDescription ||
+                exchangeFailedMessage ||
+                "Sign-in didn't complete. Please try again.",
+            },
+          });
+        }
+      } catch (err) {
+        // Catch-all: nothing above should throw, but if something
+        // unexpected does, never leave the page stuck on a blank loading
+        // state — surface it on /auth instead.
+        console.error("Auth init failed:", err);
+        if (mounted) {
+          navigate("/auth", {
+            replace: true,
+            state: {
+              authError:
+                err?.message || "Sign-in didn't complete. Please try again.",
+            },
+          });
+        }
+      } finally {
+        // Auth loading is done — this is the only place we set it false
+        if (mounted) {
+          setAuthLoading(false);
+          initDone.current = true;
+        }
+      }
     };
 
     init();
