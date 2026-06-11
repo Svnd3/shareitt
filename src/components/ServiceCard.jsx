@@ -138,6 +138,9 @@ export default function ServiceCard({ family, userId, isMember = false }) {
         <p className="w-full truncate text-center text-xs font-medium text-slate-600">
           {family.service_name}
         </p>
+        <p className="text-center text-xs font-bold text-emerald-700">
+          KSh {family.price_per_slot}
+        </p>
       </div>
 
       {/* Expanded details */}

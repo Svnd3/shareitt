@@ -507,7 +507,7 @@ export default function Home({ session, authLoading }) {
 
         <section className="space-y-4 mb-4">
           <h1 className="text-2xl font-bold text-slate-950">
-            Stop overpaying for subscriptions.
+            Share more. Spend less.
           </h1>
         </section>
 
