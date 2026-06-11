@@ -10,7 +10,6 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../components/ToastProvider";
 import Tooltip from "../components/Tooltip";
 import SocialHandleInput from "../components/SocialHandleInput";
-import { getEscrowTotal } from "../lib/maintenanceFee";
 import { SERVICE_NAME_OPTIONS } from "../lib/services";
 
 function LoadingOverlay({ message }) {
@@ -36,10 +35,9 @@ export default function Host() {
   const [pricePerSlot, setPricePerSlot] = useState("");
   const [totalSlots, setTotalSlots] = useState("");
   const [whatsappLink, setWhatsappLink] = useState("");
-  const [hostingMethod, setHostingMethod] = useState("whatsapp");
-  const [hostMpesaCode, setHostMpesaCode] = useState("");
   const [hostSocial1, setHostSocial1] = useState("");
   const [socialFieldKey, setSocialFieldKey] = useState(0);
+  const [groupNameCopied, setGroupNameCopied] = useState(false);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState(null);
@@ -379,8 +377,20 @@ export default function Host() {
     setLoading(false);
   };
 
-  const isValidMpesaCode = (value) =>
-    /^[A-Z0-9]{10}$/.test(value.trim().toUpperCase());
+  const suggestedGroupName = serviceName.trim()
+    ? `${serviceName.trim()} – ShareIt Group`
+    : "";
+
+  const handleCopyGroupName = async () => {
+    try {
+      await navigator.clipboard.writeText(suggestedGroupName);
+      setGroupNameCopied(true);
+      setTimeout(() => setGroupNameCopied(false), 2000);
+    } catch (error) {
+      console.error("Copy failed:", error);
+      setStatus("Unable to copy. Long-press the name to copy it manually.");
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -393,13 +403,6 @@ export default function Host() {
       !hostSocial1.trim()
     ) {
       setStatus("Please complete all required fields.");
-      return;
-    }
-
-    if (hostingMethod === "escrow" && !isValidMpesaCode(hostMpesaCode)) {
-      setStatus(
-        "Please send your contribution to 0741401230 and enter the 10-character M-Pesa code, e.g. QHJ2345678.",
-      );
       return;
     }
 
@@ -416,14 +419,10 @@ export default function Host() {
         filled_slots: 0,
         is_verified: false,
         is_live: true,
-        whatsapp_group_link: hostingMethod === "whatsapp" ? whatsappLink : null,
-        hosting_method: hostingMethod,
+        whatsapp_group_link: whatsappLink,
+        hosting_method: "whatsapp",
         host_social_1: hostSocial1.trim(),
         host_email: session?.user?.email || null,
-        host_payment_mpesa_code:
-          hostingMethod === "escrow"
-            ? hostMpesaCode.trim().toUpperCase()
-            : null,
         created_by: session?.user?.id,
       },
     ]);
@@ -446,8 +445,6 @@ export default function Host() {
     setPricePerSlot("");
     setTotalSlots("");
     setWhatsappLink("");
-    setHostingMethod("whatsapp");
-    setHostMpesaCode("");
     setHostSocial1("");
     setSocialFieldKey((key) => key + 1);
 
@@ -648,148 +645,70 @@ export default function Host() {
                 </span>
               </label>
             </div>
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-slate-900">
-                Hosting method
+            <div className="space-y-3 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+              <p className="font-semibold">Set up your WhatsApp group</p>
+              <p className="text-slate-700">
+                We've generated a name for your group below. Copy it, open
+                WhatsApp, create a new group and paste it in as the group
+                name. Once you've added members, copy the group's invite link
+                and paste it into the field below — anyone who opens it will
+                land in a group that's already named and ready to go.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setHostingMethod("escrow")}
-                  className={`rounded-3xl border p-4 text-left transition ${
-                    hostingMethod === "escrow"
-                      ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200"
-                      : "border-slate-200 bg-slate-50"
-                  }`}
-                >
-                  <p className="font-semibold text-slate-950">
-                    ShareIt Escrow{" "}
-                    <span className="text-emerald-700">(Recommended)</span>
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    Everyone pays ShareIt directly via M-Pesa — including your
-                    share. We verify every payment, so you never have to chase
-                    anyone for money. Simple, safe, stress-free.
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHostingMethod("whatsapp")}
-                  className={`rounded-3xl border p-4 text-left transition ${
-                    hostingMethod === "whatsapp"
-                      ? "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200"
-                      : "border-slate-200 bg-slate-50"
-                  }`}
-                >
-                  <p className="font-semibold text-slate-950">
-                    WhatsApp Group
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    You collect payments yourself, directly from members.
-                    ShareIt never handles this money and cannot help recover
-                    it if a member doesn't pay or disappears.
-                  </p>
-                </button>
-              </div>
+              {suggestedGroupName ? (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex-1 break-words rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900">
+                    {suggestedGroupName}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyGroupName}
+                      className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                    >
+                      {groupNameCopied ? "Copied!" : "Copy name"}
+                    </button>
+                    <a
+                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(suggestedGroupName)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full bg-[#1A7A3C] px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600"
+                    >
+                      Open WhatsApp
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-emerald-700">
+                  Select a service above to generate a group name.
+                </p>
+              )}
             </div>
 
-            {hostingMethod === "whatsapp" ? (
-              <>
-                <label className="space-y-2 text-sm text-slate-700">
-                  WhatsApp Group Link (optional)
-                  <input
-                    value={whatsappLink}
-                    onChange={(event) => setWhatsappLink(event.target.value)}
-                    type="url"
-                    placeholder="https://chat.whatsapp.com/..."
-                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-                  />
-                </label>
-                <div className="rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">
-                  <p className="font-semibold">
-                    ⚠ You are fully responsible for this group's money
-                  </p>
-                  <p className="mt-2 text-red-800">
-                    With WhatsApp Group, every M-Pesa payment goes straight
-                    between you and your members — ShareIt is not involved
-                    and cannot see, hold, refund, or recover any of it. If a
-                    member pays the wrong amount, doesn't pay at all, or
-                    vanishes after joining, <strong>that loss is yours</strong>{" "}
-                    and ShareIt accepts no responsibility or liability for it.
-                    Only choose this if you trust your own ability to collect
-                    payments and resolve issues directly.
-                  </p>
-                </div>
-              </>
-            ) : (
-              <div className="space-y-4">
-                <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
-                  <p className="font-semibold">
-                    Why ShareIt Escrow is safer
-                  </p>
-                  <p className="mt-2 text-slate-700">
-                    Instead of everyone sending money around to each other,
-                    every member — including you — sends their share to
-                    ShareIt's M-Pesa number. We check off each payment, so
-                    the group stays accountable and no one has to chase
-                    anyone else for cash.
-                  </p>
-                  {Number(pricePerSlot) > 0 &&
-                    (() => {
-                      const { serviceAmount, maintenanceFee, total } =
-                        getEscrowTotal(pricePerSlot);
-                      return (
-                        <div className="mt-4 rounded-2xl bg-white p-4">
-                          <p className="font-semibold text-slate-900">
-                            Each joiner will pay
-                          </p>
-                          <p className="mt-1 text-lg font-semibold text-slate-950">
-                            KSh {total}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            KSh {serviceAmount} service + KSh {maintenanceFee}{" "}
-                            ShareIt fee
-                          </p>
-                        </div>
-                      );
-                    })()}
-                </div>
-
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-950">
-                    Send your contribution to start your listing
-                  </p>
-                  <p className="mt-2">
-                    As the host, your share is{" "}
-                    <strong>
-                      KSh {Number(pricePerSlot) > 0 ? pricePerSlot : "—"}
-                    </strong>
-                    . Send this amount via M-Pesa to ShareIt's number below,
-                    then enter the confirmation code. We'll verify it and your
-                    family will go live.
-                  </p>
-                  <div className="mt-4 rounded-2xl bg-white border border-slate-200 p-4 text-center">
-                    <p className="text-2xl font-bold text-slate-950">
-                      0741401230
-                    </p>
-                    <p className="text-sm text-slate-500">Lavender Echessa</p>
-                  </div>
-                  <label className="mt-4 block space-y-2 text-sm text-slate-700">
-                    M-Pesa Confirmation Code
-                    <input
-                      value={hostMpesaCode}
-                      onChange={(event) =>
-                        setHostMpesaCode(event.target.value.toUpperCase())
-                      }
-                      type="text"
-                      maxLength={10}
-                      placeholder="e.g. QHJ2345678"
-                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 tracking-widest font-mono"
-                    />
-                  </label>
-                </div>
-              </div>
-            )}
+            <label className="space-y-2 text-sm text-slate-700">
+              WhatsApp Group Link (optional)
+              <input
+                value={whatsappLink}
+                onChange={(event) => setWhatsappLink(event.target.value)}
+                type="url"
+                placeholder="https://chat.whatsapp.com/..."
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+              />
+            </label>
+            <div className="rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">
+              <p className="font-semibold">
+                ⚠ You are fully responsible for this group's money
+              </p>
+              <p className="mt-2 text-red-800">
+                Every M-Pesa payment goes straight between you and your
+                members — ShareIt is not involved and cannot see, hold,
+                refund, or recover any of it. If a member pays the wrong
+                amount, doesn't pay at all, or vanishes after joining,{" "}
+                <strong>that loss is yours</strong> and ShareIt accepts no
+                responsibility or liability for it. Only host if you trust
+                your own ability to collect payments and resolve issues
+                directly.
+              </p>
+            </div>
 
             <div className="space-y-3">
               <button
@@ -797,11 +716,7 @@ export default function Host() {
                 disabled={loading}
                 className="inline-flex w-full items-center justify-center rounded-full bg-[#1A7A3C] px-6 py-4 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                {loading
-                  ? "Saving…"
-                  : hostingMethod === "escrow"
-                    ? "Submit payment & create family"
-                    : "Create family"}
+                {loading ? "Saving…" : "Create family"}
               </button>
               {status && <p className="text-sm text-slate-700">{status}</p>}
             </div>

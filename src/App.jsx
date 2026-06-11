@@ -15,7 +15,6 @@ import Host from "./pages/Host";
 import Report from "./pages/Report";
 import Auth from "./pages/Auth";
 import Pay from "./pages/Pay";
-import EscrowPay from "./pages/EscrowPay";
 import HowItWorksPage from "./pages/HowItWorks";
 import Footer from "./components/Footer";
 import { ToastProvider } from "./components/ToastProvider";
@@ -446,7 +445,6 @@ function AppRoutes() {
         element={<Home session={session} authLoading={authLoading} />}
       />
       <Route path="/join/:familyId" element={<Join />} />
-      <Route path="/pay-escrow/:familyId" element={<EscrowPay />} />
       <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route
         path="/host"

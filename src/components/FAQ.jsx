@@ -9,10 +9,6 @@ export default function FAQ() {
       a: "Payments go directly to your host via M-Pesa. ShareIt is a matching platform, not a payment processor. Always verify the host details before sending money.",
     },
     {
-      q: "ShareIt Escrow vs WhatsApp Group — what's the difference?",
-      a: "When hosting, you choose how members pay. With ShareIt Escrow, joiners pay ShareIt the service price plus a small ShareIt fee (KSh 9–22 depending on the price per slot), and ShareIt manages the subscription payment to the host automatically. With WhatsApp Group, joiners pay you directly via M-Pesa outside the app — there's no ShareIt fee, but ShareIt is not liable for these payments since its role is only to connect you. In both cases ShareIt has done its job by connecting people; for WhatsApp Group families, both host and joiner share a social media handle so ShareIt can help track participants if a dispute comes up.",
-    },
-    {
       q: "How does the reliability fee work?",
       a: "The KSh 90 reliability fee is a one-time payment that helps confirm you’re a real participant and keep the community safer. It is sent via M-Pesa to 0741401230 when you join a family. This fee helps hosts feel more confident about new members and is one of the methods we use to discourage and identify people who try to join without paying, avoid their responsibility, or act in ways that harm the group.",
     },

@@ -307,21 +307,6 @@ export default function ServiceCard({ family, userId, isMember = false }) {
               </span>
             </div>
 
-            {/* Payment method */}
-            <div className="mt-3">
-              <span
-                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${
-                  family.hosting_method === "escrow"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : "bg-slate-50 text-slate-600 border-slate-300"
-                }`}
-              >
-                {family.hosting_method === "escrow"
-                  ? "🔒 ShareIt Escrow"
-                  : "💬 WhatsApp group"}
-              </span>
-            </div>
-
             {family.payment_due === true && (
               <p className="text-xs text-amber-600 mt-1">
                 ⚠ Host payment due — listing may become inactive soon
