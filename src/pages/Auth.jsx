@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { sendWelcomeEmail } from "../lib/sendEmail";
@@ -16,6 +16,13 @@ const HAS_SOCIAL_OPTIONS =
   ENABLE_APPLE_AUTH ||
   ENABLE_FACEBOOK_AUTH ||
   ENABLE_PHONE_AUTH;
+
+// Cloudflare Turnstile site key — Supabase Attack Protection requires a
+// captchaToken on signInWithPassword/signUp/signInWithOtp/OAuth calls.
+// "localhost" is whitelisted on this widget, so it renders in dev too.
+const TURNSTILE_SITE_KEY = "0x4AAAAAADiyzEeh7Sm01gTN";
+const TURNSTILE_SCRIPT_SRC =
+  "https://challenges.cloudflare.com/turnstile/v0/api.js";
 
 // ── tiny SVG icons (inline, no extra dependency) ──────────────────────────
 const Spinner = () => (
@@ -418,6 +425,14 @@ function PasswordStrengthMeter({ password }) {
   );
 }
 
+function TurnstileWidget({ containerRef }) {
+  return (
+    <div className="flex justify-center">
+      <div ref={containerRef} />
+    </div>
+  );
+}
+
 // ── shared OAuth + phone block ──────────────────────────────────────────────
 function SocialOptions({ oauthLoading, handleOAuth, switchMode }) {
   const extraProviders = [];
@@ -816,10 +831,67 @@ export default function Auth() {
   );
   const [now, setNow] = useState(() => Date.now());
 
+  // Cloudflare Turnstile CAPTCHA
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [turnstileReady, setTurnstileReady] = useState(
+    () => typeof window !== "undefined" && Boolean(window.turnstile),
+  );
+  const turnstileContainerRef = useRef(null);
+  const turnstileWidgetIdRef = useRef(null);
+
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Load the Turnstile script once (shared across mounts via script id).
+  // If window.turnstile already exists, the lazy initial state above
+  // already accounts for it.
+  useEffect(() => {
+    if (window.turnstile) return;
+    const existing = document.getElementById("cf-turnstile-script");
+    if (existing) {
+      existing.addEventListener("load", () => setTurnstileReady(true));
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "cf-turnstile-script";
+    script.src = TURNSTILE_SCRIPT_SRC;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setTurnstileReady(true);
+    document.head.appendChild(script);
+  }, []);
+
+  // Render the widget once the script is ready and the container exists.
+  useEffect(() => {
+    if (!turnstileReady || !turnstileContainerRef.current) return;
+    if (turnstileWidgetIdRef.current) return;
+
+    turnstileWidgetIdRef.current = window.turnstile.render(
+      turnstileContainerRef.current,
+      {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token) => setCaptchaToken(token),
+        "expired-callback": () => setCaptchaToken(""),
+        "error-callback": () => setCaptchaToken(""),
+      },
+    );
+
+    return () => {
+      if (window.turnstile && turnstileWidgetIdRef.current) {
+        window.turnstile.remove(turnstileWidgetIdRef.current);
+        turnstileWidgetIdRef.current = null;
+      }
+    };
+  }, [turnstileReady]);
+
+  const resetCaptcha = () => {
+    setCaptchaToken("");
+    if (window.turnstile && turnstileWidgetIdRef.current) {
+      window.turnstile.reset(turnstileWidgetIdRef.current);
+    }
+  };
 
   // Clear the OAuth-error nav state so it doesn't reappear on back/forward
   // navigation, while preserving the original "from" redirect target.
@@ -860,13 +932,18 @@ export default function Auth() {
   // ── OAuth (Google / Apple / Facebook) ──
   const handleOAuth = async (provider) => {
     clear();
+    if (!captchaToken) {
+      setError("Please complete the verification challenge.");
+      return;
+    }
     setOauthLoading(provider);
     const dest = redirectTo.startsWith("/") ? redirectTo : `/${redirectTo}`;
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${appUrl}${dest}` },
+      options: { redirectTo: `${appUrl}${dest}`, captchaToken },
     });
     setOauthLoading("");
+    resetCaptcha();
     if (error) {
       setError(error.message);
       return;
@@ -887,15 +964,20 @@ export default function Auth() {
       setError("Please enter a valid email address.");
       return;
     }
+    if (!captchaToken) {
+      setError("Please complete the verification challenge.");
+      return;
+    }
 
     // Password reset
     if (mode === "reset") {
       setLoading(true);
       const { error: e } = await supabase.auth.resetPasswordForEmail(
         normalizedEmail,
-        { redirectTo: `${appUrl}/auth` },
+        { redirectTo: `${appUrl}/auth`, captchaToken },
       );
       setLoading(false);
+      resetCaptcha();
       if (e) {
         setError(e.message);
         return;
@@ -955,13 +1037,15 @@ export default function Auth() {
         ? await supabase.auth.signInWithPassword({
             email: normalizedEmail,
             password,
+            options: { captchaToken },
           })
         : await supabase.auth.signUp({
             email: normalizedEmail,
             password,
-            options: { data: { full_name: fullName.trim() } },
+            options: { data: { full_name: fullName.trim() }, captchaToken },
           });
     setLoading(false);
+    resetCaptcha();
 
     if (result.error) {
       if (mode === "signIn") {
@@ -1001,9 +1085,17 @@ export default function Auth() {
       setError("Enter a valid Kenyan phone number, e.g. 0712345678.");
       return;
     }
+    if (!captchaToken) {
+      setError("Please complete the verification challenge.");
+      return;
+    }
     setLoading(true);
-    const { error: e } = await supabase.auth.signInWithOtp({ phone: e164 });
+    const { error: e } = await supabase.auth.signInWithOtp({
+      phone: e164,
+      options: { captchaToken },
+    });
     setLoading(false);
+    resetCaptcha();
     if (e) {
       setError(e.message);
       return;
@@ -1037,9 +1129,17 @@ export default function Auth() {
   const handlePhoneResend = async () => {
     if (resendRemaining > 0) return;
     clear();
+    if (!captchaToken) {
+      setError("Please complete the verification challenge.");
+      return;
+    }
     setLoading(true);
-    const { error: e } = await supabase.auth.signInWithOtp({ phone });
+    const { error: e } = await supabase.auth.signInWithOtp({
+      phone,
+      options: { captchaToken },
+    });
     setLoading(false);
+    resetCaptcha();
     if (e) {
       setError(e.message);
       return;
@@ -1168,6 +1268,10 @@ export default function Auth() {
                 successMessage={successMessage}
               />
             )}
+
+            <div className="mt-5">
+              <TurnstileWidget containerRef={turnstileContainerRef} />
+            </div>
           </div>
 
           {/* Footer strip */}
