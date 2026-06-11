@@ -56,6 +56,7 @@ export default function Home({ session, authLoading }) {
   })();
 
   const [families, setFamilies] = useState([]);
+  const [memberFamilyIds, setMemberFamilyIds] = useState(() => new Set());
   const [activeService, setActiveService] = useState(initialService);
   const [priceFilter, setPriceFilter] = useState("All");
   const [slotFilter, setSlotFilter] = useState("All");
@@ -207,6 +208,52 @@ export default function Home({ session, authLoading }) {
       cancelled = true;
     };
   }, []);
+
+  // Fetch which families the signed-in user belongs to in a single query,
+  // instead of letting every ServiceCard run its own getSession() + members
+  // lookup — that per-card N+1 pattern is what made "checking" status slow
+  // on pages with many families.
+  useEffect(() => {
+    let cancelled = false;
+    const userId = session?.user?.id;
+    const accessToken = session?.access_token;
+
+    const fetchMemberships = async () => {
+      if (!hasSupabaseConfig || !userId || !accessToken) {
+        if (!cancelled) setMemberFamilyIds(new Set());
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams({
+          select: "family_id",
+          user_id: `eq.${userId}`,
+        });
+        const response = await fetch(
+          `${supabaseUrl}/rest/v1/members?${params.toString()}`,
+          {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${accessToken}`,
+            },
+            signal: AbortSignal.timeout(15000),
+          },
+        );
+        if (cancelled || !response.ok) return;
+        const data = await response.json();
+        setMemberFamilyIds(new Set(data.map((row) => row.family_id)));
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Home fetch memberships exception:", error);
+        }
+      }
+    };
+
+    fetchMemberships();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id, session?.access_token]);
 
   useEffect(() => {
     if (notice) {
@@ -783,7 +830,12 @@ export default function Home({ session, authLoading }) {
                 </div>
               ) : (
                 collection.map((family) => (
-                  <ServiceCard key={family.id} family={family} />
+                  <ServiceCard
+                    key={family.id}
+                    family={family}
+                    userId={session?.user?.id}
+                    isMember={memberFamilyIds.has(family.id)}
+                  />
                 ))
               )}
             </div>

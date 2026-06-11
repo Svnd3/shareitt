@@ -41,10 +41,8 @@ const getBrandLogo = (serviceName) => {
   return null;
 };
 
-export default function ServiceCard({ family }) {
-  const [isHost, setIsHost] = useState(false);
-  const [isMember, setIsMember] = useState(false);
-  const [checking, setChecking] = useState(true);
+export default function ServiceCard({ family, userId, isMember = false }) {
+  const isHost = Boolean(userId) && userId === family.created_by;
   const [flagOpen, setFlagOpen] = useState(false);
   const [logoLoadFailed, setLogoLoadFailed] = useState(false);
   const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
@@ -68,43 +66,6 @@ export default function ServiceCard({ family }) {
     );
     setFlagOpen(false);
   };
-
-  useEffect(() => {
-    let mounted = true;
-    const checkUser = async () => {
-      try {
-        if (!supabase.auth?.getSession) {
-          setChecking(false);
-          return;
-        }
-        const { data } = await supabase.auth.getSession();
-        const userId = data?.session?.user?.id;
-        if (!userId) {
-          setChecking(false);
-          return;
-        }
-        if (mounted) setIsHost(userId === family.created_by);
-
-        const { data: memberData, error } = await supabase
-          .from("members")
-          .select("id")
-          .eq("family_id", family.id)
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        if (mounted) setIsMember(Boolean(memberData && !error));
-      } catch (e) {
-        // ignore
-      } finally {
-        if (mounted) setChecking(false);
-      }
-    };
-
-    checkUser();
-    return () => {
-      mounted = false;
-    };
-  }, [family.id, family.created_by]);
 
   useEffect(() => {
     setLogoLoadFailed(false);
@@ -305,11 +266,11 @@ export default function ServiceCard({ family }) {
               Host another
             </Link>
           </>
-        ) : !checking && isHost ? (
+        ) : isHost ? (
           <span className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
             You are the host
           </span>
-        ) : !checking && isMember ? (
+        ) : isMember ? (
           <span className="inline-flex items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
             Joined
           </span>
