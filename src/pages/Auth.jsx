@@ -6,10 +6,16 @@ import { sendWelcomeEmail } from "../lib/sendEmail";
 // Feature flags — flip these on once the corresponding provider is configured
 // in the Supabase dashboard (Authentication > Providers). Until then these
 // sign-in options stay hidden so users don't hit "provider not enabled" errors.
+const ENABLE_GOOGLE_AUTH = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === "true";
 const ENABLE_APPLE_AUTH = import.meta.env.VITE_ENABLE_APPLE_AUTH === "true";
 const ENABLE_FACEBOOK_AUTH =
   import.meta.env.VITE_ENABLE_FACEBOOK_AUTH === "true";
 const ENABLE_PHONE_AUTH = import.meta.env.VITE_ENABLE_PHONE_AUTH === "true";
+const HAS_SOCIAL_OPTIONS =
+  ENABLE_GOOGLE_AUTH ||
+  ENABLE_APPLE_AUTH ||
+  ENABLE_FACEBOOK_AUTH ||
+  ENABLE_PHONE_AUTH;
 
 // ── tiny SVG icons (inline, no extra dependency) ──────────────────────────
 const Spinner = () => (
@@ -441,15 +447,19 @@ function SocialOptions({ oauthLoading, handleOAuth, switchMode }) {
     );
   }
 
+  if (!HAS_SOCIAL_OPTIONS) return null;
+
   return (
     <div className="space-y-3">
-      <OAuthButton
-        icon={<IconGoogle />}
-        label="Continue with Google"
-        onClick={() => handleOAuth("google")}
-        loading={oauthLoading === "google"}
-        disabled={Boolean(oauthLoading)}
-      />
+      {ENABLE_GOOGLE_AUTH && (
+        <OAuthButton
+          icon={<IconGoogle />}
+          label="Continue with Google"
+          onClick={() => handleOAuth("google")}
+          loading={oauthLoading === "google"}
+          disabled={Boolean(oauthLoading)}
+        />
+      )}
       {extraProviders.length > 0 && (
         <div
           className={
@@ -494,12 +504,16 @@ function SignInView(props) {
 
   return (
     <div className="space-y-5">
-      <SocialOptions
-        oauthLoading={oauthLoading}
-        handleOAuth={handleOAuth}
-        switchMode={switchMode}
-      />
-      <Divider />
+      {HAS_SOCIAL_OPTIONS && (
+        <>
+          <SocialOptions
+            oauthLoading={oauthLoading}
+            handleOAuth={handleOAuth}
+            switchMode={switchMode}
+          />
+          <Divider />
+        </>
+      )}
       <Field
         id="auth-email"
         label="Email"
@@ -577,12 +591,16 @@ function SignUpView(props) {
 
   return (
     <div className="space-y-5">
-      <SocialOptions
-        oauthLoading={oauthLoading}
-        handleOAuth={handleOAuth}
-        switchMode={switchMode}
-      />
-      <Divider />
+      {HAS_SOCIAL_OPTIONS && (
+        <>
+          <SocialOptions
+            oauthLoading={oauthLoading}
+            handleOAuth={handleOAuth}
+            switchMode={switchMode}
+          />
+          <Divider />
+        </>
+      )}
       <Field
         id="auth-full-name"
         label="Full name"
