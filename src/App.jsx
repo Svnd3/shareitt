@@ -174,24 +174,34 @@ function AppRoutes() {
       const hashAccessToken = hashParams.get("access_token");
       const hashRefreshToken = hashParams.get("refresh_token");
 
-      // Password reset links carry type=recovery (as a query param for the
-      // PKCE "code" flow, or in the hash for the implicit token flow).
-      const isRecovery =
-        searchParams.get("type") === "recovery" ||
-        hashParams.get("type") === "recovery";
+      // Password reset links point straight at /auth with token_hash +
+      // type=recovery (see the "Reset Password" email template) — verified
+      // directly via verifyOtp, which works even if the link is opened in a
+      // different browser/device than the one that requested it (unlike the
+      // PKCE "code" flow, which needs a code_verifier from the requesting
+      // browser's storage).
+      const tokenHash =
+        searchParams.get("token_hash") || hashParams.get("token_hash");
+      const otpType = searchParams.get("type") || hashParams.get("type");
+      const isRecovery = otpType === "recovery";
       passwordRecoveryRef.current = isRecovery;
 
       const isCallback = Boolean(
-        code || (hashAccessToken && hashRefreshToken) || oauthErrorDescription,
+        code ||
+          tokenHash ||
+          (hashAccessToken && hashRefreshToken) ||
+          oauthErrorDescription,
       );
 
       const hasAuthParams =
         searchParams.has("access_token") ||
         searchParams.has("refresh_token") ||
         searchParams.has("code") ||
+        searchParams.has("token_hash") ||
         searchParams.has("error") ||
         hashParams.has("access_token") ||
         hashParams.has("refresh_token") ||
+        hashParams.has("token_hash") ||
         hashParams.has("error");
 
       // Codes/tokens are single-use. Strip them from the URL up front so
@@ -210,7 +220,25 @@ function AppRoutes() {
         // the PKCE "code" / hash tokens ourselves with a hard timeout — a
         // hung exchange (e.g. a cold-starting Supabase project) would
         // otherwise block getSession() and every other Supabase call forever.
-        if (code) {
+        if (tokenHash && otpType) {
+          try {
+            const { data: verifyData, error: verifyError } = await withTimeout(
+              supabase.auth.verifyOtp({ token_hash: tokenHash, type: otpType }),
+              20000,
+              "Sign-in timed out. Please try again.",
+            );
+            if (verifyError) {
+              console.error("verifyOtp error:", verifyError);
+              exchangeFailedMessage = verifyError.message;
+            } else {
+              sessionFromExchange = verifyData?.session ?? null;
+            }
+          } catch (e) {
+            console.error("verifyOtp failed:", e);
+            exchangeFailedMessage =
+              e?.message || "Sign-in timed out. Please try again.";
+          }
+        } else if (code) {
           try {
             const { data: exchangeData, error: exchangeError } =
               await withTimeout(
