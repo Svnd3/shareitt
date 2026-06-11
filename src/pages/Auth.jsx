@@ -722,6 +722,57 @@ function ResetView(props) {
   );
 }
 
+function UpdatePasswordView(props) {
+  const {
+    password,
+    setPassword,
+    confirmPassword,
+    setConfirmPassword,
+    showPassword,
+    toggleShowPassword,
+    handleSubmit,
+    loading,
+    error,
+    successMessage,
+  } = props;
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        Choose a new password for your ShareIt account.
+      </div>
+      <div className="space-y-2">
+        <Field
+          id="auth-new-password"
+          label="New password"
+          type={showPassword ? "text" : "password"}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="At least 8 characters"
+          autoComplete="new-password"
+          showToggle={true}
+          showToggleValue={showPassword}
+          onToggle={toggleShowPassword}
+        />
+        <PasswordStrengthMeter password={password} />
+      </div>
+      <Field
+        id="auth-confirm-new-password"
+        label="Confirm new password"
+        type={showPassword ? "text" : "password"}
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        placeholder="••••••••"
+        autoComplete="new-password"
+      />
+      <Feedback error={error} successMessage={successMessage} />
+      <PrimaryBtn onClick={handleSubmit} loading={loading}>
+        Update password
+      </PrimaryBtn>
+    </div>
+  );
+}
+
 function PhoneView(props) {
   const {
     phone,
@@ -807,11 +858,14 @@ function PhoneView(props) {
 }
 
 // ── main component ─────────────────────────────────────────────────────────
-export default function Auth() {
+export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState("signIn"); // "signIn" | "signUp" | "reset" | "phone"
+  // "signIn" | "signUp" | "reset" | "phone" | "updatePassword"
+  const [mode, setMode] = useState(() =>
+    recoveryMode ? "updatePassword" : "signIn",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -965,6 +1019,48 @@ export default function Auth() {
   // ── Email / password submit ──
   const handleSubmit = async () => {
     clear();
+
+    // Set a new password (after following the email reset link)
+    if (mode === "updatePassword") {
+      if (!password) {
+        setError("Please enter a new password.");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
+      if (COMMON_PASSWORDS.has(password.toLowerCase())) {
+        setError(
+          "That password is too common and easy to guess. Please choose a stronger one.",
+        );
+        return;
+      }
+      if (getPasswordStrength(password).score < 3) {
+        setError(
+          "Please choose a stronger password — mix uppercase, lowercase, numbers and symbols.",
+        );
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+      setLoading(true);
+      const { error: e } = await supabase.auth.updateUser({ password });
+      setLoading(false);
+      if (e) {
+        setError(e.message);
+        return;
+      }
+      setSuccessMessage("Password updated! Redirecting…");
+      setTimeout(() => {
+        if (onRecoveryComplete) onRecoveryComplete();
+        else navigate("/");
+      }, 1200);
+      return;
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
@@ -1169,6 +1265,10 @@ export default function Auth() {
       sub: "Join ShareIt and start sharing subscriptions",
     },
     reset: { label: "Reset password", sub: "We'll email you a secure link" },
+    updatePassword: {
+      label: "Set new password",
+      sub: "Choose a new password to finish resetting your account",
+    },
     phone: {
       label: "Sign in with phone",
       sub: "Verify with a one-time SMS code",
@@ -1279,10 +1379,26 @@ export default function Auth() {
                 successMessage={successMessage}
               />
             )}
+            {mode === "updatePassword" && (
+              <UpdatePasswordView
+                password={password}
+                setPassword={setPassword}
+                confirmPassword={confirmPassword}
+                setConfirmPassword={setConfirmPassword}
+                showPassword={showPassword}
+                toggleShowPassword={() => setShowPassword((v) => !v)}
+                handleSubmit={handleSubmit}
+                loading={loading}
+                error={error}
+                successMessage={successMessage}
+              />
+            )}
 
-            <div className="mt-5">
-              <HCaptchaWidget containerRef={hcaptchaContainerRef} />
-            </div>
+            {mode !== "updatePassword" && (
+              <div className="mt-5">
+                <HCaptchaWidget containerRef={hcaptchaContainerRef} />
+              </div>
+            )}
           </div>
 
           {/* Footer strip */}

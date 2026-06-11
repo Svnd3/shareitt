@@ -73,11 +73,20 @@ function PayRoute({ children, authLoading, paymentConfirmed, session }) {
   return children;
 }
 
-function AuthRoute({ children, authLoading, paymentConfirmed, session }) {
+function AuthRoute({
+  children,
+  authLoading,
+  paymentConfirmed,
+  session,
+  passwordRecovery,
+}) {
   // While auth is resolving, render nothing — no flash screen
   if (authLoading) return null;
 
-  if (session) {
+  // A password-recovery link signs the user in via a one-time token, but
+  // they still need to land on the "set new password" form instead of being
+  // bounced straight into the app.
+  if (session && !passwordRecovery) {
     if (paymentConfirmed) {
       return <Navigate to="/" replace />;
     }
@@ -110,6 +119,11 @@ function AppRoutes() {
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const paymentConfirmedRef = useRef(false);
   const initDone = useRef(false);
+  // Set when the user arrives via a password-reset email link — keeps them
+  // on /auth (showing the "set new password" form) instead of the normal
+  // signed-in redirects.
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const passwordRecoveryRef = useRef(false);
 
   const checkPaymentStatus = async (userId) => {
     if (!userId) {
@@ -159,6 +173,13 @@ function AppRoutes() {
       const code = searchParams.get("code");
       const hashAccessToken = hashParams.get("access_token");
       const hashRefreshToken = hashParams.get("refresh_token");
+
+      // Password reset links carry type=recovery (as a query param for the
+      // PKCE "code" flow, or in the hash for the implicit token flow).
+      const isRecovery =
+        searchParams.get("type") === "recovery" ||
+        hashParams.get("type") === "recovery";
+      passwordRecoveryRef.current = isRecovery;
 
       const isCallback = Boolean(
         code || (hashAccessToken && hashRefreshToken) || oauthErrorDescription,
@@ -260,14 +281,25 @@ function AppRoutes() {
         setSession(currentSession);
 
         if (currentSession?.user?.id) {
-          const confirmed = await checkPaymentStatus(currentSession.user.id);
-          if (!mounted) return;
+          if (isRecovery) {
+            // Keep the user on /auth so they can set a new password instead
+            // of being redirected into the app like a normal sign-in.
+            setPasswordRecovery(true);
+            if (window.location.pathname !== "/auth") {
+              navigate("/auth", { replace: true });
+            }
+          } else {
+            const confirmed = await checkPaymentStatus(
+              currentSession.user.id,
+            );
+            if (!mounted) return;
 
-          const currentPath = window.location.pathname;
-          if (!confirmed && currentPath !== "/pay") {
-            navigate("/pay", { replace: true });
-          } else if (confirmed && currentPath === "/pay") {
-            navigate("/", { replace: true });
+            const currentPath = window.location.pathname;
+            if (!confirmed && currentPath !== "/pay") {
+              navigate("/pay", { replace: true });
+            } else if (confirmed && currentPath === "/pay") {
+              navigate("/", { replace: true });
+            }
           }
         } else if (oauthErrorDescription || exchangeFailedMessage) {
           // OAuth redirected back but no session resulted — either the
@@ -332,8 +364,10 @@ function AppRoutes() {
           return;
         }
 
-        // Only re-check payment on an actual new sign-in
-        if (event === "SIGNED_IN") {
+        // Only re-check payment on an actual new sign-in. Skip entirely
+        // during password recovery — the user needs to land on the
+        // "set new password" form, not get bounced into the app.
+        if (event === "SIGNED_IN" && !passwordRecoveryRef.current) {
           if (newSession.user.email) {
             sendSignInEmail({
               email: newSession.user.email,
@@ -362,6 +396,19 @@ function AppRoutes() {
     };
   }, []); // Empty deps — runs once on mount only. navigate is stable.
 
+  // Called once the user has set a new password on the recovery form —
+  // resume the normal post-sign-in flow (payment gate or home).
+  const handleRecoveryComplete = async () => {
+    setPasswordRecovery(false);
+    passwordRecoveryRef.current = false;
+    if (session?.user?.id) {
+      const confirmed = await checkPaymentStatus(session.user.id);
+      navigate(confirmed ? "/" : "/pay", { replace: true });
+    } else {
+      navigate("/", { replace: true });
+    }
+  };
+
   return (
     <>
       <ScrollToTop />
@@ -389,8 +436,12 @@ function AppRoutes() {
             authLoading={authLoading}
             paymentConfirmed={paymentConfirmed}
             session={session}
+            passwordRecovery={passwordRecovery}
           >
-            <Auth />
+            <Auth
+              recoveryMode={passwordRecovery}
+              onRecoveryComplete={handleRecoveryComplete}
+            />
           </AuthRoute>
         }
       />
