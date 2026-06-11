@@ -87,6 +87,22 @@ function AuthRoute({ children, authLoading, paymentConfirmed, session }) {
   return children;
 }
 
+// Browsers restore the previous scroll position on reload by default, which
+// can land the user mid-page (e.g. on the footer). Take manual control so a
+// reload — and every route change — starts at the top of the page instead.
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function AppRoutes() {
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
@@ -347,7 +363,9 @@ function AppRoutes() {
   }, []); // Empty deps — runs once on mount only. navigate is stable.
 
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route
         path="/"
         element={<Home session={session} authLoading={authLoading} />}
@@ -392,7 +410,8 @@ function AppRoutes() {
         path="*"
         element={<Home session={session} authLoading={authLoading} />}
       />
-    </Routes>
+      </Routes>
+    </>
   );
 }
 

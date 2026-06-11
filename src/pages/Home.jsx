@@ -9,7 +9,6 @@ import {
 import { useToast } from "../components/ToastProvider";
 import ServiceCard from "../components/ServiceCard";
 import FAQ from "../components/FAQ";
-import QuickPairing from "../components/QuickPairing";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ShareItLogo from "../assets/shareitlogo.png";
 import SpotifyImg from "../assets/spotify.jpg";
@@ -507,18 +506,11 @@ export default function Home({ session, authLoading }) {
         </section>
 
         <section className="space-y-4 mb-4">
-          <div className="rounded-3xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 shadow-sm">
-            <span className="mr-2">🛡️</span>
-            Your safety matters — pay a one-time KSh 90 reliability fee via
-            M-Pesa to 0741401230 before joining. This protects hosts and keeps
-            our community trusted.
-          </div>
           <h1 className="text-2xl font-bold text-slate-950">
             Stop overpaying for subscriptions.
           </h1>
         </section>
 
-        <QuickPairing />
         <section className="space-y-4 py-4">
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
@@ -811,9 +803,9 @@ export default function Home({ session, authLoading }) {
           )}
 
           <div className="flex justify-center">
-            <div id="listings" className="w-full max-w-[92%] grid gap-3 md:grid-cols-2 md:max-w-full xl:grid-cols-3" style={{ touchAction: 'pan-y' }}>
+            <div id="listings" className="grid w-full grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8" style={{ touchAction: 'pan-y' }}>
               {loading ? (
-                <SkeletonGrid count={6} />
+                <SkeletonGrid count={12} />
               ) : collection.length === 0 ? (
                 <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
                   {familyView === "available" ? (

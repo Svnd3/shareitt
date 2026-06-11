@@ -657,6 +657,11 @@ function SignUpView(props) {
         placeholder="••••••••"
         autoComplete="new-password"
       />
+      <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+        🛡️ Joining a family needs a one-time KSh 90 fee (M-Pesa:
+        0741401230). It keeps members accountable and helps us maintain
+        ShareIt.
+      </div>
       <Feedback error={error} successMessage={successMessage} />
       <PrimaryBtn onClick={handleSubmit} loading={loading}>
         Create account
