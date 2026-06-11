@@ -17,12 +17,12 @@ const HAS_SOCIAL_OPTIONS =
   ENABLE_FACEBOOK_AUTH ||
   ENABLE_PHONE_AUTH;
 
-// Cloudflare Turnstile site key — Supabase Attack Protection requires a
-// captchaToken on signInWithPassword/signUp/signInWithOtp/OAuth calls.
-// "localhost" is whitelisted on this widget, so it renders in dev too.
-const TURNSTILE_SITE_KEY = "0x4AAAAAADiyzEeh7Sm01gTN";
-const TURNSTILE_SCRIPT_SRC =
-  "https://challenges.cloudflare.com/turnstile/v0/api.js";
+// hCaptcha site key — Supabase Attack Protection requires a captchaToken on
+// signInWithPassword/signUp/signInWithOtp/OAuth calls. Switched from
+// Cloudflare Turnstile because challenges.cloudflare.com is unreachable in
+// our region.
+const HCAPTCHA_SITE_KEY = "6e2cd186-3970-468e-9502-0a58b80ea3ee";
+const HCAPTCHA_SCRIPT_SRC = "https://js.hcaptcha.com/1/api.js";
 
 // ── tiny SVG icons (inline, no extra dependency) ──────────────────────────
 const Spinner = () => (
@@ -425,7 +425,7 @@ function PasswordStrengthMeter({ password }) {
   );
 }
 
-function TurnstileWidget({ containerRef }) {
+function HCaptchaWidget({ containerRef }) {
   return (
     <div className="flex justify-center">
       <div ref={containerRef} />
@@ -831,47 +831,53 @@ export default function Auth() {
   );
   const [now, setNow] = useState(() => Date.now());
 
-  // Cloudflare Turnstile CAPTCHA
+  // hCaptcha CAPTCHA
   const [captchaToken, setCaptchaToken] = useState("");
-  const [turnstileReady, setTurnstileReady] = useState(
-    () => typeof window !== "undefined" && Boolean(window.turnstile),
+  const [hcaptchaReady, setHcaptchaReady] = useState(
+    () => typeof window !== "undefined" && Boolean(window.hcaptcha),
   );
-  const turnstileContainerRef = useRef(null);
-  const turnstileWidgetIdRef = useRef(null);
+  // If the hCaptcha script can't load (e.g. blocked in this region), don't
+  // permanently block sign-in/sign-up behind a challenge that can never
+  // render — let the submit go through without a token.
+  const [hcaptchaLoadFailed, setHcaptchaLoadFailed] = useState(false);
+  const hcaptchaContainerRef = useRef(null);
+  const hcaptchaWidgetIdRef = useRef(null);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // Load the Turnstile script once (shared across mounts via script id).
-  // If window.turnstile already exists, the lazy initial state above
+  // Load the hCaptcha script once (shared across mounts via script id).
+  // If window.hcaptcha already exists, the lazy initial state above
   // already accounts for it.
   useEffect(() => {
-    if (window.turnstile) return;
-    const existing = document.getElementById("cf-turnstile-script");
+    if (window.hcaptcha) return;
+    const existing = document.getElementById("hcaptcha-script");
     if (existing) {
-      existing.addEventListener("load", () => setTurnstileReady(true));
+      existing.addEventListener("load", () => setHcaptchaReady(true));
+      existing.addEventListener("error", () => setHcaptchaLoadFailed(true));
       return;
     }
     const script = document.createElement("script");
-    script.id = "cf-turnstile-script";
-    script.src = TURNSTILE_SCRIPT_SRC;
+    script.id = "hcaptcha-script";
+    script.src = HCAPTCHA_SCRIPT_SRC;
     script.async = true;
     script.defer = true;
-    script.onload = () => setTurnstileReady(true);
+    script.onload = () => setHcaptchaReady(true);
+    script.onerror = () => setHcaptchaLoadFailed(true);
     document.head.appendChild(script);
   }, []);
 
   // Render the widget once the script is ready and the container exists.
   useEffect(() => {
-    if (!turnstileReady || !turnstileContainerRef.current) return;
-    if (turnstileWidgetIdRef.current) return;
+    if (!hcaptchaReady || !hcaptchaContainerRef.current) return;
+    if (hcaptchaWidgetIdRef.current) return;
 
-    turnstileWidgetIdRef.current = window.turnstile.render(
-      turnstileContainerRef.current,
+    hcaptchaWidgetIdRef.current = window.hcaptcha.render(
+      hcaptchaContainerRef.current,
       {
-        sitekey: TURNSTILE_SITE_KEY,
+        sitekey: HCAPTCHA_SITE_KEY,
         callback: (token) => setCaptchaToken(token),
         "expired-callback": () => setCaptchaToken(""),
         "error-callback": () => setCaptchaToken(""),
@@ -879,17 +885,17 @@ export default function Auth() {
     );
 
     return () => {
-      if (window.turnstile && turnstileWidgetIdRef.current) {
-        window.turnstile.remove(turnstileWidgetIdRef.current);
-        turnstileWidgetIdRef.current = null;
+      if (window.hcaptcha && hcaptchaWidgetIdRef.current) {
+        window.hcaptcha.remove(hcaptchaWidgetIdRef.current);
+        hcaptchaWidgetIdRef.current = null;
       }
     };
-  }, [turnstileReady]);
+  }, [hcaptchaReady]);
 
   const resetCaptcha = () => {
     setCaptchaToken("");
-    if (window.turnstile && turnstileWidgetIdRef.current) {
-      window.turnstile.reset(turnstileWidgetIdRef.current);
+    if (window.hcaptcha && hcaptchaWidgetIdRef.current) {
+      window.hcaptcha.reset(hcaptchaWidgetIdRef.current);
     }
   };
 
@@ -932,7 +938,7 @@ export default function Auth() {
   // ── OAuth (Google / Apple / Facebook) ──
   const handleOAuth = async (provider) => {
     clear();
-    if (!captchaToken) {
+    if (!captchaToken && !hcaptchaLoadFailed) {
       setError("Please complete the verification challenge.");
       return;
     }
@@ -964,7 +970,7 @@ export default function Auth() {
       setError("Please enter a valid email address.");
       return;
     }
-    if (!captchaToken) {
+    if (!captchaToken && !hcaptchaLoadFailed) {
       setError("Please complete the verification challenge.");
       return;
     }
@@ -1085,7 +1091,7 @@ export default function Auth() {
       setError("Enter a valid Kenyan phone number, e.g. 0712345678.");
       return;
     }
-    if (!captchaToken) {
+    if (!captchaToken && !hcaptchaLoadFailed) {
       setError("Please complete the verification challenge.");
       return;
     }
@@ -1129,7 +1135,7 @@ export default function Auth() {
   const handlePhoneResend = async () => {
     if (resendRemaining > 0) return;
     clear();
-    if (!captchaToken) {
+    if (!captchaToken && !hcaptchaLoadFailed) {
       setError("Please complete the verification challenge.");
       return;
     }
@@ -1270,7 +1276,7 @@ export default function Auth() {
             )}
 
             <div className="mt-5">
-              <TurnstileWidget containerRef={turnstileContainerRef} />
+              <HCaptchaWidget containerRef={hcaptchaContainerRef} />
             </div>
           </div>
 
