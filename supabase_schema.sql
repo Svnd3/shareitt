@@ -14,6 +14,7 @@ create table families (
     check (hosting_method in ('escrow', 'whatsapp')),
   host_social_1 text,
   host_email text,
+  host_payment_mpesa_code text,
   created_by uuid references auth.users(id),
   created_at timestamp default now()
 );
@@ -90,6 +91,11 @@ create table escrow_payments (
 -- MIGRATION: run this once against an existing database to add the host's
 -- email (used to notify hosts of incoming ShareIt Escrow payments).
 alter table families add column if not exists host_email text;
+
+-- MIGRATION: run this once against an existing database to record the
+-- host's own M-Pesa contribution code when they pick the "escrow" hosting
+-- method (paid to ShareIt's number before the listing is created).
+alter table families add column if not exists host_payment_mpesa_code text;
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- Automatic emails setup (one-time, manual dashboard steps)

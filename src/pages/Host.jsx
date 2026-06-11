@@ -37,6 +37,7 @@ export default function Host() {
   const [totalSlots, setTotalSlots] = useState("");
   const [whatsappLink, setWhatsappLink] = useState("");
   const [hostingMethod, setHostingMethod] = useState("whatsapp");
+  const [hostMpesaCode, setHostMpesaCode] = useState("");
   const [hostSocial1, setHostSocial1] = useState("");
   const [socialFieldKey, setSocialFieldKey] = useState(0);
   const [status, setStatus] = useState("");
@@ -378,6 +379,9 @@ export default function Host() {
     setLoading(false);
   };
 
+  const isValidMpesaCode = (value) =>
+    /^[A-Z0-9]{10}$/.test(value.trim().toUpperCase());
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (
@@ -389,6 +393,13 @@ export default function Host() {
       !hostSocial1.trim()
     ) {
       setStatus("Please complete all required fields.");
+      return;
+    }
+
+    if (hostingMethod === "escrow" && !isValidMpesaCode(hostMpesaCode)) {
+      setStatus(
+        "Please send your contribution to 0741401230 and enter the 10-character M-Pesa code, e.g. QHJ2345678.",
+      );
       return;
     }
 
@@ -409,6 +420,10 @@ export default function Host() {
         hosting_method: hostingMethod,
         host_social_1: hostSocial1.trim(),
         host_email: session?.user?.email || null,
+        host_payment_mpesa_code:
+          hostingMethod === "escrow"
+            ? hostMpesaCode.trim().toUpperCase()
+            : null,
         created_by: session?.user?.id,
       },
     ]);
@@ -432,6 +447,7 @@ export default function Host() {
     setTotalSlots("");
     setWhatsappLink("");
     setHostingMethod("whatsapp");
+    setHostMpesaCode("");
     setHostSocial1("");
     setSocialFieldKey((key) => key + 1);
 
@@ -616,15 +632,20 @@ export default function Host() {
                 />
               </label>
               <label className="space-y-2 text-sm text-slate-700">
-                Total Slots
+                Total Slots{" "}
+                <Tooltip content="Slots for other members to join — this is on top of your own seat in the subscription. E.g. for a 5-screen plan where you keep 1 screen, enter 4." />
                 <input
                   value={totalSlots}
                   onChange={(event) => setTotalSlots(event.target.value)}
                   type="number"
                   min="1"
-                  placeholder="5"
+                  placeholder="4"
                   className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
                 />
+                <span className="block text-xs text-slate-500">
+                  Number of slots available to members joining you — not
+                  including your own seat.
+                </span>
               </label>
             </div>
             <div className="space-y-3">
@@ -642,12 +663,13 @@ export default function Host() {
                   }`}
                 >
                   <p className="font-semibold text-slate-950">
-                    ShareIt Escrow
+                    ShareIt Escrow{" "}
+                    <span className="text-emerald-700">(Recommended)</span>
                   </p>
                   <p className="mt-1 text-xs text-slate-600">
-                    Joiners pay ShareIt automatically (M-Pesa). ShareIt
-                    collects the service price plus a small ShareIt fee on
-                    your behalf.
+                    Everyone pays ShareIt directly via M-Pesa — including your
+                    share. We verify every payment, so you never have to chase
+                    anyone for money. Simple, safe, stress-free.
                   </p>
                 </button>
                 <button
@@ -663,52 +685,109 @@ export default function Host() {
                     WhatsApp Group
                   </p>
                   <p className="mt-1 text-xs text-slate-600">
-                    Joiners pay you directly outside the app. ShareIt only
-                    helps you connect — no payment handling, no ShareIt fee.
+                    You collect payments yourself, directly from members.
+                    ShareIt never handles this money and cannot help recover
+                    it if a member doesn't pay or disappears.
                   </p>
                 </button>
               </div>
             </div>
 
             {hostingMethod === "whatsapp" ? (
-              <label className="space-y-2 text-sm text-slate-700">
-                WhatsApp Group Link (optional)
-                <input
-                  value={whatsappLink}
-                  onChange={(event) => setWhatsappLink(event.target.value)}
-                  type="url"
-                  placeholder="https://chat.whatsapp.com/..."
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
+              <>
+                <label className="space-y-2 text-sm text-slate-700">
+                  WhatsApp Group Link (optional)
+                  <input
+                    value={whatsappLink}
+                    onChange={(event) => setWhatsappLink(event.target.value)}
+                    type="url"
+                    placeholder="https://chat.whatsapp.com/..."
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </label>
+                <div className="rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">
+                  <p className="font-semibold">
+                    ⚠ You are fully responsible for this group's money
+                  </p>
+                  <p className="mt-2 text-red-800">
+                    With WhatsApp Group, every M-Pesa payment goes straight
+                    between you and your members — ShareIt is not involved
+                    and cannot see, hold, refund, or recover any of it. If a
+                    member pays the wrong amount, doesn't pay at all, or
+                    vanishes after joining, <strong>that loss is yours</strong>{" "}
+                    and ShareIt accepts no responsibility or liability for it.
+                    Only choose this if you trust your own ability to collect
+                    payments and resolve issues directly.
+                  </p>
+                </div>
+              </>
             ) : (
-              <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
-                <p className="font-semibold">
-                  Automatic payments via ShareIt Escrow
-                </p>
-                <p className="mt-2 text-slate-700">
-                  Joiners pay ShareIt directly via M-Pesa. You don't need a
-                  WhatsApp group link for payments.
-                </p>
-                {Number(pricePerSlot) > 0 &&
-                  (() => {
-                    const { serviceAmount, maintenanceFee, total } =
-                      getEscrowTotal(pricePerSlot);
-                    return (
-                      <div className="mt-4 rounded-2xl bg-white p-4">
-                        <p className="font-semibold text-slate-900">
-                          Joiners will pay
-                        </p>
-                        <p className="mt-1 text-lg font-semibold text-slate-950">
-                          KSh {total}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          KSh {serviceAmount} service + KSh {maintenanceFee}{" "}
-                          ShareIt fee
-                        </p>
-                      </div>
-                    );
-                  })()}
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+                  <p className="font-semibold">
+                    Why ShareIt Escrow is safer
+                  </p>
+                  <p className="mt-2 text-slate-700">
+                    Instead of everyone sending money around to each other,
+                    every member — including you — sends their share to
+                    ShareIt's M-Pesa number. We check off each payment, so
+                    the group stays accountable and no one has to chase
+                    anyone else for cash.
+                  </p>
+                  {Number(pricePerSlot) > 0 &&
+                    (() => {
+                      const { serviceAmount, maintenanceFee, total } =
+                        getEscrowTotal(pricePerSlot);
+                      return (
+                        <div className="mt-4 rounded-2xl bg-white p-4">
+                          <p className="font-semibold text-slate-900">
+                            Each joiner will pay
+                          </p>
+                          <p className="mt-1 text-lg font-semibold text-slate-950">
+                            KSh {total}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            KSh {serviceAmount} service + KSh {maintenanceFee}{" "}
+                            ShareIt fee
+                          </p>
+                        </div>
+                      );
+                    })()}
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-950">
+                    Send your contribution to start your listing
+                  </p>
+                  <p className="mt-2">
+                    As the host, your share is{" "}
+                    <strong>
+                      KSh {Number(pricePerSlot) > 0 ? pricePerSlot : "—"}
+                    </strong>
+                    . Send this amount via M-Pesa to ShareIt's number below,
+                    then enter the confirmation code. We'll verify it and your
+                    family will go live.
+                  </p>
+                  <div className="mt-4 rounded-2xl bg-white border border-slate-200 p-4 text-center">
+                    <p className="text-2xl font-bold text-slate-950">
+                      0741401230
+                    </p>
+                    <p className="text-sm text-slate-500">Lavender Echessa</p>
+                  </div>
+                  <label className="mt-4 block space-y-2 text-sm text-slate-700">
+                    M-Pesa Confirmation Code
+                    <input
+                      value={hostMpesaCode}
+                      onChange={(event) =>
+                        setHostMpesaCode(event.target.value.toUpperCase())
+                      }
+                      type="text"
+                      maxLength={10}
+                      placeholder="e.g. QHJ2345678"
+                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 tracking-widest font-mono"
+                    />
+                  </label>
+                </div>
               </div>
             )}
 
@@ -718,7 +797,11 @@ export default function Host() {
                 disabled={loading}
                 className="inline-flex w-full items-center justify-center rounded-full bg-[#1A7A3C] px-6 py-4 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                {loading ? "Saving…" : "Create family"}
+                {loading
+                  ? "Saving…"
+                  : hostingMethod === "escrow"
+                    ? "Submit payment & create family"
+                    : "Create family"}
               </button>
               {status && <p className="text-sm text-slate-700">{status}</p>}
             </div>
