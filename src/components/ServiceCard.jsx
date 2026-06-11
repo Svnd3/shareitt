@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 const BRAND_KEYWORDS = [
@@ -39,23 +39,27 @@ const BRAND_KEYWORDS = [
   ["linkedin", "linkedin.com"],
 ];
 
-const getBrandLogo = (serviceName) => {
+const getBrandDomain = (serviceName) => {
   const lowerName = serviceName?.toLowerCase() ?? "";
   const match = BRAND_KEYWORDS.find(([keyword]) =>
     lowerName.includes(keyword),
   );
 
-  if (match) {
-    return `https://www.google.com/s2/favicons?domain=${match[1]}&sz=128`;
-  }
-
-  return null;
+  return match ? match[1] : null;
 };
+
+const getLogoUrl = (domain, stage) =>
+  stage === 0
+    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+    : `https://icons.duckduckgo.com/ip3/${domain}.ico`;
 
 export default function ServiceCard({ family, userId, isMember = false }) {
   const isHost = Boolean(userId) && userId === family.created_by;
   const [flagOpen, setFlagOpen] = useState(false);
-  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+  const [logoStage, setLogoStage] = useState(0);
+  const [logoServiceName, setLogoServiceName] = useState(
+    family.service_name,
+  );
   const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
   const [editingUnique, setEditingUnique] = useState(false);
   const [savingUnique, setSavingUnique] = useState(false);
@@ -78,17 +82,18 @@ export default function ServiceCard({ family, userId, isMember = false }) {
     setFlagOpen(false);
   };
 
-  useEffect(() => {
-    setLogoLoadFailed(false);
-  }, [family.service_name]);
+  if (logoServiceName !== family.service_name) {
+    setLogoServiceName(family.service_name);
+    setLogoStage(0);
+  }
 
   const slotsLeft = family.total_slots - family.filled_slots;
   const slotBadge =
     slotsLeft <= 1
       ? "bg-red-100 text-red-800"
       : "bg-emerald-100 text-emerald-900";
-  const primaryLogo = getBrandLogo(family.service_name);
-  const shouldShowFallbackLogo = logoLoadFailed || !primaryLogo;
+  const brandDomain = getBrandDomain(family.service_name);
+  const shouldShowFallbackLogo = !brandDomain || logoStage >= 2;
   const remainingFunding = slotsLeft * family.price_per_slot;
 
   const reportMailto = `mailto:keninnofficial@gmail.com?subject=${encodeURIComponent(
@@ -132,9 +137,11 @@ export default function ServiceCard({ family, userId, isMember = false }) {
             </div>
           ) : (
             <img
-              src={primaryLogo}
+              src={getLogoUrl(brandDomain, logoStage)}
               alt={`${family.service_name} logo`}
-              onError={() => setLogoLoadFailed(true)}
+              onError={() =>
+                setLogoStage((stage) => Math.min(stage + 1, 2))
+              }
               className="h-full w-full rounded-full bg-white object-contain p-2"
             />
           )}
