@@ -164,7 +164,7 @@ export default function Home({ session, authLoading }) {
         // app — leaving this fetch stuck forever despite its own timeout.
         const params = new URLSearchParams({
           select:
-            "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,created_by,created_at",
+            "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,hosting_method,created_by,created_at",
           is_live: "eq.true",
           order: "created_at.desc",
         });

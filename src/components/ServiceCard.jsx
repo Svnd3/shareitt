@@ -2,40 +2,51 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-const getBrandLogo = (serviceName) => {
-  const brandMap = {
-    "Netflix Standard": "netflix.com",
-    "Netflix Basic": "netflix.com",
-    "Spotify Premium": "spotify.com",
-    "ChatGPT Plus": "openai.com",
-    "Claude Pro": "anthropic.com",
-    "Canva Pro": "canva.com",
-    "YouTube Premium": "youtube.com",
-    "Prime Video": "amazon.com",
-    "Disney+": "disneyplus.com",
-    "Apple TV+": "apple.com",
-    "Microsoft 365": "microsoft.com",
-    "Google One": "google.com",
-    Notion: "notion.so",
-    Figma: "figma.com",
-    Dropbox: "dropbox.com",
-    Showmax: "showmax.com",
-    Deezer: "deezer.com",
-    "Xbox Game Pass": "xbox.com",
-    "PlayStation Plus": "playstation.com",
-    "LinkedIn Premium": "linkedin.com",
-    "Duolingo Plus": "duolingo.com",
-  };
+const BRAND_KEYWORDS = [
+  ["spotify", "spotify.com"],
+  ["netflix", "netflix.com"],
+  ["youtube", "youtube.com"],
+  ["prime video", "amazon.com"],
+  ["amazon", "amazon.com"],
+  ["disney", "disneyplus.com"],
+  ["showmax", "showmax.com"],
+  ["apple", "apple.com"],
+  ["chatgpt", "openai.com"],
+  ["openai", "openai.com"],
+  ["claude", "claude.ai"],
+  ["canva", "canva.com"],
+  ["microsoft", "microsoft.com"],
+  ["google", "google.com"],
+  ["notion", "notion.so"],
+  ["figma", "figma.com"],
+  ["dropbox", "dropbox.com"],
+  ["adobe", "adobe.com"],
+  ["grammarly", "grammarly.com"],
+  ["duolingo", "duolingo.com"],
+  ["playstation", "playstation.com"],
+  ["xbox", "xbox.com"],
+  ["nordvpn", "nordvpn.com"],
+  ["expressvpn", "expressvpn.com"],
+  ["audible", "audible.com"],
+  ["telegram", "telegram.org"],
+  ["discord", "discord.com"],
+  ["deezer", "deezer.com"],
+  ["tidal", "tidal.com"],
+  ["soundcloud", "soundcloud.com"],
+  ["hulu", "hulu.com"],
+  ["crunchyroll", "crunchyroll.com"],
+  ["hbo", "max.com"],
+  ["linkedin", "linkedin.com"],
+];
 
+const getBrandLogo = (serviceName) => {
   const lowerName = serviceName?.toLowerCase() ?? "";
-  const key = Object.keys(brandMap).find(
-    (k) =>
-      lowerName.includes(k.toLowerCase()) ||
-      k.toLowerCase().includes(lowerName),
+  const match = BRAND_KEYWORDS.find(([keyword]) =>
+    lowerName.includes(keyword),
   );
 
-  if (key) {
-    return `https://www.google.com/s2/favicons?domain=${brandMap[key]}&sz=128`;
+  if (match) {
+    return `https://www.google.com/s2/favicons?domain=${match[1]}&sz=128`;
   }
 
   return null;
@@ -228,6 +239,21 @@ export default function ServiceCard({ family, userId, isMember = false }) {
           {slotsLeft <= 0
             ? "Full"
             : `${slotsLeft} slot${slotsLeft === 1 ? "" : "s"} left`}
+        </span>
+      </div>
+
+      {/* Payment method */}
+      <div className="mt-3">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${
+            family.hosting_method === "escrow"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-slate-50 text-slate-600 border-slate-300"
+          }`}
+        >
+          {family.hosting_method === "escrow"
+            ? "🔒 ShareIt Escrow"
+            : "💬 WhatsApp group"}
         </span>
       </div>
 
