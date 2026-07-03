@@ -13,21 +13,22 @@ export default function HowItWorks() {
     },
     {
       number: 2,
-      title: "Confirm via WhatsApp",
+      title: "Join for free",
       description:
-        "Pay KSh 90 reliability fee to 0741401230 via WhatsApp or M-Pesa",
-      icon: "💬",
+        "Submit your details and two social media contacts so the host can verify you",
+      icon: "📝",
     },
     {
       number: 3,
-      title: "Pay KSh 90",
-      description: "This keeps hosts protected and keeps listings trusted",
-      icon: "💳",
+      title: "Connect via WhatsApp",
+      description: "Get added to the host's WhatsApp group instantly",
+      icon: "💬",
     },
     {
       number: 4,
-      title: "Join group",
-      description: "After payment, join the WhatsApp group and start sharing",
+      title: "Share the cost",
+      description:
+        "Agree on payment for the subscription directly with your host",
       icon: "👥",
     },
   ];

@@ -57,40 +57,6 @@ export async function sendMembershipRequestEmail({
   });
 }
 
-export async function sendPaymentConfirmationEmail({
-  email,
-  memberName,
-  amount,
-}) {
-  if (!email) {
-    throw new Error("Missing member email.");
-  }
-
-  await invokeEmailFunction("payment_confirmation", {
-    to: email,
-    member_name: memberName,
-    amount,
-  });
-}
-
-export async function sendPaymentReminderEmail({
-  email,
-  memberName,
-  serviceName,
-  hostName,
-}) {
-  if (!email) {
-    throw new Error("Missing member email.");
-  }
-
-  await invokeEmailFunction("payment_reminder", {
-    to: email,
-    member_name: memberName,
-    service_name: serviceName,
-    host_name: hostName,
-  });
-}
-
 export async function sendWelcomeEmail({ email, name }) {
   if (!email) {
     throw new Error("Missing user email.");
@@ -110,28 +76,6 @@ export async function sendSignInEmail({ email, name }) {
   await invokeEmailFunction("sign_in", {
     to: email,
     name,
-  });
-}
-
-export async function sendEscrowPaymentReceivedEmail({
-  email,
-  hostName,
-  memberName,
-  serviceName,
-  amount,
-  mpesaCode,
-}) {
-  if (!email) {
-    throw new Error("Missing host email.");
-  }
-
-  await invokeEmailFunction("escrow_payment_received", {
-    to: email,
-    host_name: hostName,
-    member_name: memberName,
-    service_name: serviceName,
-    amount,
-    mpesa_code: mpesaCode,
   });
 }
 

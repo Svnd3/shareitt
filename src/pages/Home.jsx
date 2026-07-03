@@ -100,7 +100,7 @@ export default function Home({ session, authLoading }) {
       serviceSlug ? `/?service=${encodeURIComponent(serviceSlug)}` : ""
     }`;
     const shareText =
-      "Save on subscriptions with ShareIt Kenya. Browse live family listings, pay a KSh 90 reliability fee, and join WhatsApp groups to share services together. ";
+      "Save on subscriptions with ShareIt Kenya. Browse live family listings for free and join WhatsApp groups to share services together. ";
     const sharePayload = {
       title: "ShareIt — Kenya subscription families",
       text: `${shareText}${shareUrl}`,
@@ -879,7 +879,8 @@ export default function Home({ session, authLoading }) {
                   payment details.
                 </li>
                 <li>
-                  Reliability fees are paid by M-Pesa directly to the host.
+                  Joining and hosting are free — the subscription cost itself
+                  is paid by M-Pesa directly to the host.
                 </li>
                 <li>
                   ShareIt does not manage refunds, account bans, or disputes

@@ -4,7 +4,6 @@ import { supabase } from "../lib/supabaseClient";
 import {
   sendHostRegistrationEmail,
   sendMemberRemovedEmail,
-  sendPaymentReminderEmail,
 } from "../lib/sendEmail";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../components/ToastProvider";
@@ -198,7 +197,7 @@ export default function Host() {
     setLoading(true);
 
     const shareText =
-      "I’m hosting family subscription listings on ShareIt Kenya. Join live families, pay a KSh 90 reliability fee, and connect through WhatsApp to save on services together. ";
+      "I’m hosting family subscription listings on ShareIt Kenya. Join live families for free and connect through WhatsApp to save on services together. ";
     const shareUrl = window.location.origin + "/host";
 
     try {
@@ -349,31 +348,6 @@ export default function Host() {
         ? "Family removed from live listings."
         : "Family is now live!",
     );
-    setLoading(false);
-  };
-
-  const handleSendPaymentReminder = async (member, family) => {
-    if (!member.email) {
-      setStatus("This member does not have an email address.");
-      return;
-    }
-
-    setStatus("Sending payment reminder...");
-    setLoading(true);
-
-    try {
-      await sendPaymentReminderEmail({
-        email: member.email,
-        memberName: member.name,
-        serviceName: family.service_name,
-        hostName: family.host_name,
-      });
-      setStatus("Payment reminder sent.");
-    } catch (error) {
-      console.error("Payment reminder failed:", error);
-      setStatus("Unable to send reminder. Please try again.");
-    }
-
     setLoading(false);
   };
 
@@ -839,23 +813,8 @@ export default function Host() {
                                     {member.email}
                                   </p>
                                 )}
-                                <p className="mt-1 text-xs font-semibold text-slate-500">
-                                  {member.payment_confirmed
-                                    ? "Payment confirmed"
-                                    : "Payment pending"}
-                                </p>
                               </div>
                               <div className="flex flex-wrap gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleSendPaymentReminder(member, family)
-                                  }
-                                  disabled={loading || member.payment_confirmed}
-                                  className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
-                                >
-                                  {member.payment_confirmed ? "Paid" : "Remind"}
-                                </button>
                                 <button
                                   type="button"
                                   onClick={() =>

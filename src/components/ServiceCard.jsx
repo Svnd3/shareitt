@@ -307,12 +307,6 @@ export default function ServiceCard({ family, userId, isMember = false }) {
               </span>
             </div>
 
-            {family.payment_due === true && (
-              <p className="text-xs text-amber-600 mt-1">
-                ⚠ Host payment due — listing may become inactive soon
-              </p>
-            )}
-
             {/* Funding info */}
             <div className="mt-4 rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
               {slotsLeft > 0 ? (

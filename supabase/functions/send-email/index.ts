@@ -72,45 +72,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
           <p>Hi ${String(member_name)},</p>
           <p>Thanks for requesting to join <strong>${String(service_name)}</strong> hosted by ${String(host_name)}.</p>
           <p>We recorded your request and will share any updates as soon as the host confirms your membership.</p>
-          <p>If you paid the reliability fee, your spot is ready to be activated.</p>
           <p>Thank you for using ShareIt.</p>
-        `,
-      };
-    }
-    case "payment_confirmation": {
-      const { to, member_name, amount } = payload as Record<string, unknown>;
-      if (!to || !member_name || !amount) {
-        throw new Error("Missing payment confirmation fields.");
-      }
-      return {
-        from: "ShareIt <no-reply@shareitt.xyz>",
-        to,
-        subject: "Payment confirmed — thank you for supporting ShareIt",
-        html: `
-          <p>Hi ${String(member_name)},</p>
-          <p>We received your payment of <strong>KSh ${String(amount)}</strong>.</p>
-          <p>Your reliability fee is confirmed and your ShareIt account is in good standing.</p>
-          <p>Browse available families or return to your dashboard to continue.</p>
-        `,
-      };
-    }
-    case "payment_reminder": {
-      const { to, member_name, service_name, host_name } = payload as Record<
-        string,
-        unknown
-      >;
-      if (!to || !member_name || !service_name || !host_name) {
-        throw new Error("Missing payment reminder fields.");
-      }
-      return {
-        from: "ShareIt <no-reply@shareitt.xyz>",
-        to,
-        subject: `Reminder: pay your reliability fee for ${service_name}`,
-        html: `
-          <p>Hi ${String(member_name)},</p>
-          <p>This is a friendly reminder to complete the KSh 90 reliability fee for <strong>${String(service_name)}</strong> hosted by ${String(host_name)}.</p>
-          <p>Once your payment is confirmed, you will remain in good standing with ShareIt and keep access to the family service.</p>
-          <p>If you need help, reply to this email or contact your host directly.</p>
         `,
       };
     }
@@ -129,8 +91,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
           <p>Next steps:</p>
           <ul>
             <li>Confirm your email address if you haven't already.</li>
-            <li>Pay the one-time KSh 90 reliability fee to activate your account.</li>
-            <li>Browse live families to join, or host your own for free.</li>
+            <li>Browse live families to join, or host your own — both are free.</li>
           </ul>
           <p>Thanks for joining ShareIt.</p>
         `,
@@ -149,30 +110,6 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
           <p>Hi ${String(name || "there")},</p>
           <p>We noticed a new sign-in to your ShareIt account.</p>
           <p>If this was you, no action is needed. If you don't recognize this activity, please reset your password right away.</p>
-        `,
-      };
-    }
-    case "escrow_payment_received": {
-      const {
-        to,
-        host_name,
-        member_name,
-        service_name,
-        amount,
-        mpesa_code,
-      } = payload as Record<string, unknown>;
-      if (!to || !member_name || !service_name || !amount || !mpesa_code) {
-        throw new Error("Missing escrow payment received fields.");
-      }
-      return {
-        from: "ShareIt <no-reply@shareitt.xyz>",
-        to,
-        subject: `New escrow payment for ${service_name}`,
-        html: `
-          <p>Hi ${String(host_name || "there")},</p>
-          <p><strong>${String(member_name)}</strong> has paid <strong>KSh ${String(amount)}</strong> via ShareIt Escrow for <strong>${String(service_name)}</strong>.</p>
-          <p>M-Pesa code: <strong>${String(mpesa_code)}</strong></p>
-          <p>ShareIt will verify this payment and activate their slot shortly.</p>
         `,
       };
     }

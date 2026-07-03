@@ -5,12 +5,12 @@ export default function FAQ() {
 
   const faqs = [
     {
-      q: "Is my payment safe?",
-      a: "Payments go directly to your host via M-Pesa. ShareIt is a matching platform, not a payment processor. Always verify the host details before sending money.",
+      q: "Is joining or hosting free?",
+      a: "Yes. ShareIt does not charge any fee to join a family or to host one — both are completely free. The only money that changes hands is the subscription cost itself, which members pay directly to their host over M-Pesa, outside of ShareIt.",
     },
     {
-      q: "How does the reliability fee work?",
-      a: "The KSh 90 reliability fee is a one-time payment that helps confirm you’re a real participant and keep the community safer. It is sent via M-Pesa to 0741401230 when you join a family. This fee helps hosts feel more confident about new members and is one of the methods we use to discourage and identify people who try to join without paying, avoid their responsibility, or act in ways that harm the group.",
+      q: "Is my payment safe?",
+      a: "Payments for the subscription itself go directly to your host via M-Pesa. ShareIt is a matching platform, not a payment processor, and never collects or holds that money. Always verify the host details before sending money.",
     },
     {
       q: "What risks should I know?",
@@ -26,11 +26,11 @@ export default function FAQ() {
     },
     {
       q: "Can I host my own subscription?",
-      a: 'Yes! Head to "Host a Family" and fill in your service details, price, and total slots. You\'ll receive join requests via WhatsApp.',
+      a: 'Yes, and it\'s free! Head to "Host a Family" and fill in your service details, price, and total slots. You\'ll receive join requests via WhatsApp.',
     },
     {
       q: "What if a member misses a payment?",
-      a: "If a member misses a payment, discuss it with your host and keep a record of your chat. The reliability fee, verified badges, and good communication are meant to reduce late or unreliable payments. Always use WhatsApp for agreements and keep proof of payments.",
+      a: "If a member misses a payment, discuss it with your host and keep a record of your chat. Verified badges and good communication are meant to reduce late or unreliable payments. Always use WhatsApp for agreements and keep proof of payments.",
     },
     {
       q: "Can I delay my monthly recharge?",
@@ -38,7 +38,7 @@ export default function FAQ() {
     },
     {
       q: "How do I join a family?",
-      a: '1. Browse available families. 2. Click "Join Family" and enter your name, phone, and email. 3. Pay the KSh 90 reliability fee. 4. Get added to the host\'s WhatsApp group.',
+      a: '1. Browse available families. 2. Click "Join Family" and enter your name, phone, email, and two social media contacts. 3. Get added to the host\'s WhatsApp group — no fee required.',
     },
   ];
 

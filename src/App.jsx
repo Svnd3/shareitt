@@ -14,7 +14,6 @@ import Join from "./pages/Join";
 import Host from "./pages/Host";
 import Report from "./pages/Report";
 import Auth from "./pages/Auth";
-import Pay from "./pages/Pay";
 import HowItWorksPage from "./pages/HowItWorks";
 import Footer from "./components/Footer";
 import { ToastProvider } from "./components/ToastProvider";
@@ -57,28 +56,7 @@ function ProtectedRoute({ children, authLoading, session }) {
   return children;
 }
 
-function PayRoute({ children, authLoading, paymentConfirmed, session }) {
-  // While auth is resolving, render nothing — no flash screen
-  if (authLoading) return null;
-
-  if (!session) {
-    return <Navigate to="/auth" state={{ from: "/pay" }} replace />;
-  }
-
-  if (paymentConfirmed) {
-    return <Navigate to="/" replace />;
-  }
-
-  return children;
-}
-
-function AuthRoute({
-  children,
-  authLoading,
-  paymentConfirmed,
-  session,
-  passwordRecovery,
-}) {
+function AuthRoute({ children, authLoading, session, passwordRecovery }) {
   // While auth is resolving, render nothing — no flash screen
   if (authLoading) return null;
 
@@ -86,10 +64,7 @@ function AuthRoute({
   // they still need to land on the "set new password" form instead of being
   // bounced straight into the app.
   if (session && !passwordRecovery) {
-    if (paymentConfirmed) {
-      return <Navigate to="/" replace />;
-    }
-    return <Navigate to="/pay" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -115,8 +90,6 @@ function AppRoutes() {
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  const paymentConfirmedRef = useRef(false);
   const initDone = useRef(false);
   // Set when the user arrives via a password-reset email link — keeps them
   // on /auth (showing the "set new password" form) instead of the normal
@@ -124,32 +97,7 @@ function AppRoutes() {
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const passwordRecoveryRef = useRef(false);
 
-  const checkPaymentStatus = async (userId) => {
-    if (!userId) {
-      setPaymentConfirmed(false);
-      paymentConfirmedRef.current = false;
-      return false;
-    }
-
-    let confirmed = false;
-    try {
-      const { data, error } = await supabase
-        .from("payments")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("payment_confirmed", true)
-        .limit(1);
-      confirmed = !error && Array.isArray(data) && data.length > 0;
-    } catch (err) {
-      console.error("Payment status check failed:", err);
-    }
-
-    setPaymentConfirmed(confirmed);
-    paymentConfirmedRef.current = confirmed;
-    return confirmed;
-  };
-
-  // Main auth + payment init — runs once on mount
+  // Main auth init — runs once on mount
   useEffect(() => {
     if (!supabase.auth?.getSession) {
       setAuthLoading(false);
@@ -315,18 +263,6 @@ function AppRoutes() {
             if (window.location.pathname !== "/auth") {
               navigate("/auth", { replace: true });
             }
-          } else {
-            const confirmed = await checkPaymentStatus(
-              currentSession.user.id,
-            );
-            if (!mounted) return;
-
-            const currentPath = window.location.pathname;
-            if (!confirmed && currentPath !== "/pay") {
-              navigate("/pay", { replace: true });
-            } else if (confirmed && currentPath === "/pay") {
-              navigate("/", { replace: true });
-            }
           }
         } else if (oauthErrorDescription || exchangeFailedMessage) {
           // OAuth redirected back but no session resulted — either the
@@ -377,23 +313,10 @@ function AppRoutes() {
 
         setSession(newSession);
 
-        if (!newSession?.user?.id) {
-          setPaymentConfirmed(false);
-          paymentConfirmedRef.current = false;
-          return;
-        }
+        if (!newSession?.user?.id) return;
 
-        // If we already know payment is confirmed, skip the DB check
-        if (paymentConfirmedRef.current) {
-          if (window.location.pathname === "/pay") {
-            navigate("/", { replace: true });
-          }
-          return;
-        }
-
-        // Only re-check payment on an actual new sign-in. Skip entirely
-        // during password recovery — the user needs to land on the
-        // "set new password" form, not get bounced into the app.
+        // Skip entirely during password recovery — the user needs to land
+        // on the "set new password" form, not get bounced into the app.
         if (event === "SIGNED_IN" && !passwordRecoveryRef.current) {
           if (newSession.user.email) {
             sendSignInEmail({
@@ -402,16 +325,6 @@ function AppRoutes() {
             }).catch((error) => {
               console.error("Sign-in email failed:", error);
             });
-          }
-
-          const confirmed = await checkPaymentStatus(newSession.user.id);
-          if (!mounted) return;
-
-          const currentPath = window.location.pathname;
-          if (!confirmed && currentPath !== "/pay") {
-            navigate("/pay", { replace: true });
-          } else if (confirmed && currentPath === "/pay") {
-            navigate("/", { replace: true });
           }
         }
       },
@@ -424,16 +337,11 @@ function AppRoutes() {
   }, []); // Empty deps — runs once on mount only. navigate is stable.
 
   // Called once the user has set a new password on the recovery form —
-  // resume the normal post-sign-in flow (payment gate or home).
-  const handleRecoveryComplete = async () => {
+  // resume the normal post-sign-in flow.
+  const handleRecoveryComplete = () => {
     setPasswordRecovery(false);
     passwordRecoveryRef.current = false;
-    if (session?.user?.id) {
-      const confirmed = await checkPaymentStatus(session.user.id);
-      navigate(confirmed ? "/" : "/pay", { replace: true });
-    } else {
-      navigate("/", { replace: true });
-    }
+    navigate("/", { replace: true });
   };
 
   return (
@@ -460,7 +368,6 @@ function AppRoutes() {
         element={
           <AuthRoute
             authLoading={authLoading}
-            paymentConfirmed={paymentConfirmed}
             session={session}
             passwordRecovery={passwordRecovery}
           >
@@ -469,18 +376,6 @@ function AppRoutes() {
               onRecoveryComplete={handleRecoveryComplete}
             />
           </AuthRoute>
-        }
-      />
-      <Route
-        path="/pay"
-        element={
-          <PayRoute
-            authLoading={authLoading}
-            paymentConfirmed={paymentConfirmed}
-            session={session}
-          >
-            <Pay />
-          </PayRoute>
         }
       />
       <Route
