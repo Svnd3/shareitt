@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://shareitt.xyz/sitemap.xml
+Sitemap: https://shareit.co.ke/sitemap.xml

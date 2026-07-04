@@ -29,7 +29,7 @@ const HCAPTCHA_SCRIPT_SRC = "https://js.hcaptcha.com/1/api.js";
 // of which origin (preview deploy, localhost, etc.) the request was sent
 // from — this must match an allow-listed Redirect URL in the Supabase
 // dashboard (Authentication > URL Configuration).
-const PASSWORD_RESET_REDIRECT = "https://shareitt.xyz/auth";
+const PASSWORD_RESET_REDIRECT = "https://shareit.co.ke/auth";
 
 // ── tiny SVG icons (inline, no extra dependency) ──────────────────────────
 const Spinner = () => (
