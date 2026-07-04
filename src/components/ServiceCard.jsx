@@ -1,6 +1,15 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import SummertidesLogo from "../assets/summertideslogo.webp";
+
+const CUSTOM_LOGOS = [["summertides", SummertidesLogo]];
+
+const getCustomLogo = (serviceName) => {
+  const lowerName = serviceName?.toLowerCase() ?? "";
+  const match = CUSTOM_LOGOS.find(([keyword]) => lowerName.includes(keyword));
+  return match ? match[1] : null;
+};
 
 const BRAND_KEYWORDS = [
   ["spotify", "spotify.com"],
@@ -94,8 +103,9 @@ export default function ServiceCard({ family, userId, isMember = false }) {
     slotsLeft <= 1
       ? "bg-red-100 text-red-800"
       : "bg-saddle-100 text-saddle-700";
+  const customLogo = getCustomLogo(family.service_name);
   const brandDomain = getBrandDomain(family.service_name);
-  const shouldShowFallbackLogo = !brandDomain || logoStage >= 2;
+  const shouldShowFallbackLogo = !customLogo && (!brandDomain || logoStage >= 2);
   const remainingFunding = slotsLeft * family.price_per_slot;
   const hasOpenSlot = slotsLeft > 0;
 
@@ -105,7 +115,13 @@ export default function ServiceCard({ family, userId, isMember = false }) {
     `Hello ShareIt team,%0D%0A%0D%0AI would like to report an issue with the full group for ${family.service_name} hosted by ${family.host_name}.%0D%0A%0D%0AIssue:%0D%0A%0D%0ABest regards,%0D%0A`,
   )}`;
 
-  const logo = shouldShowFallbackLogo ? (
+  const logo = customLogo ? (
+    <img
+      src={customLogo}
+      alt={`${family.service_name} logo`}
+      className="h-full w-full rounded-2xl bg-white object-contain p-2"
+    />
+  ) : shouldShowFallbackLogo ? (
     <div className="flex h-full w-full items-center justify-center rounded-2xl bg-slate-100 font-bold text-slate-600">
       {family.service_name?.[0]?.toUpperCase() || "S"}
     </div>

@@ -15,6 +15,7 @@ import SpotifyImg from "../assets/spotify.webp";
 import NetflixImg from "../assets/netflix.webp";
 import ChatGPTImg from "../assets/chatgpt.webp";
 import PrimeImg from "../assets/prime.webp";
+import SummertidesImg from "../assets/summertides.webp";
 import { SkeletonGrid } from "../components/SkeletonCard";
 
 const filters = [
@@ -32,6 +33,7 @@ const serviceSuggestions = filters.filter((item) => item !== "All");
 
 const slides = [
   { title: "Spotify Premium" },
+  { title: "Summertides" },
   { title: "Netflix Standard" },
   { title: "ChatGPT Plus" },
   { title: "Prime Video" },
@@ -127,7 +129,7 @@ export default function Home({ session, authLoading }) {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((current) => (current + 1) % slides.length);
-    }, 3000);
+    }, 2300);
     return () => clearInterval(timer);
   }, []);
 
@@ -434,28 +436,32 @@ export default function Home({ session, authLoading }) {
         <section className="space-y-4 mb-4">
           <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-md">
             <div className="relative h-48 w-full overflow-hidden bg-slate-300">
-              {[SpotifyImg, NetflixImg, ChatGPTImg, PrimeImg].map(
-                (image, idx) => (
-                  <div
-                    key={idx}
-                    className={`absolute inset-0 transition-all duration-500 ease-out transform-gpu ${
-                      idx === currentSlide
-                        ? "opacity-100 translate-y-0 scale-100"
-                        : "opacity-0 translate-y-4 scale-105"
-                    }`}
-                    style={{ willChange: "opacity, transform" }}
-                  >
-                    <img
-                      src={image}
-                      alt={slides[idx].title}
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                      <p className="text-sm font-bold">{slides[idx].title}</p>
+              {[SpotifyImg, SummertidesImg, NetflixImg, ChatGPTImg, PrimeImg].map(
+                (image, idx) => {
+                  let offset = idx - currentSlide;
+                  if (offset > slides.length / 2) offset -= slides.length;
+                  if (offset < -slides.length / 2) offset += slides.length;
+                  return (
+                    <div
+                      key={idx}
+                      className="absolute inset-0 transition-transform duration-500 ease-out transform-gpu"
+                      style={{
+                        transform: `translateX(${offset * 100}%)`,
+                        willChange: "transform",
+                      }}
+                    >
+                      <img
+                        src={image}
+                        alt={slides[idx].title}
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                        <p className="text-sm font-bold">{slides[idx].title}</p>
+                      </div>
                     </div>
-                  </div>
-                ),
+                  );
+                },
               )}
             </div>
             <div className="flex items-center justify-between gap-2 px-4 py-3">
@@ -512,22 +518,11 @@ export default function Home({ session, authLoading }) {
         </section>
 
         <section className="mb-4">
-          <div className="flex flex-col gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-bold text-emerald-950">
-                Want to share or sell tickets?
-              </p>
-              <p className="mt-1 text-sm text-emerald-900">
-                Create a ticket family too — list event, concert, or match
-                tickets the same way you'd share a subscription.
-              </p>
-            </div>
-            <Link
-              to="/host"
-              className="inline-flex items-center justify-center rounded-full bg-[#1A7A3C] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 sm:shrink-0"
-            >
-              Create a ticket family →
-            </Link>
+          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+            <p className="text-sm text-emerald-900">
+              A platform to find people who want to cost-share a service or a
+              ticket with you.
+            </p>
           </div>
         </section>
 
