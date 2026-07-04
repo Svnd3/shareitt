@@ -75,14 +75,35 @@ export default function Footer() {
               Stay connected
             </h3>
             <ul className="mt-6 space-y-3 text-sm text-slate-300">
+              <li>
+                <a
+                  href="https://www.tiktok.com/@hezron_codess"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition hover:text-white"
+                >
+                  TikTok
+                </a>
+              </li>
               <li>Built for trusted group sharing</li>
               <li>Customer support available daily</li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-500">
-          © {new Date().getFullYear()} ShareIt Kenya. All rights reserved.
+        <div className="mt-12 flex flex-col gap-2 border-t border-slate-800 pt-6 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} ShareIt Kenya. All rights reserved.</p>
+          <p>
+            Built by{" "}
+            <a
+              href="https://www.hezronsande.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 transition hover:text-white"
+            >
+              Hezron Sandé
+            </a>
+          </p>
         </div>
       </div>
     </footer>

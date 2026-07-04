@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SeoHead from "../components/SeoHead";
 
 const emailAddress = "keninnofficial@gmail.com";
 const emailSubject = "ShareIt issue report";
@@ -8,6 +9,11 @@ const emailBody =
 export default function Report() {
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
+      <SeoHead
+        title="Report an Issue"
+        description="Report a problem with a ShareIt family listing, missing group access, or a host issue. Our team responds daily."
+        path="/report"
+      />
       <div className="mx-auto max-w-3xl space-y-8">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-sm uppercase tracking-[0.3em] text-saddle-600">

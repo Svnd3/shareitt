@@ -1,9 +1,15 @@
 import { Link } from "react-router-dom";
 import HowItWorks from "../components/HowItWorks";
+import SeoHead from "../components/SeoHead";
 
 export default function HowItWorksPage() {
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
+      <SeoHead
+        title="How ShareIt Works"
+        description="See how ShareIt lets Kenyans join or host shared Netflix, Spotify, YouTube Premium and ChatGPT plans safely, step by step."
+        path="/how-it-works"
+      />
       <div className="mx-auto max-w-4xl space-y-8">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

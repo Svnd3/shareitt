@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { sendMembershipRequestEmail } from "../lib/sendEmail";
+import SeoHead from "../components/SeoHead";
 import { defaultFamilies } from "../data/defaultFamilies";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../components/ToastProvider";
@@ -236,6 +237,7 @@ export default function Join() {
   if (!session) {
     return (
       <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
+        <SeoHead title="Join a Family" path={`/join/${familyId}`} noindex />
         <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-2xl font-semibold text-slate-950">
             Sign in to join
@@ -260,6 +262,7 @@ export default function Join() {
   if (!family) {
     return (
       <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
+        <SeoHead title="Join a Family" path={`/join/${familyId}`} noindex />
         <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-2xl font-semibold text-slate-950">
             Family not found
@@ -292,6 +295,7 @@ export default function Join() {
 
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
+      <SeoHead title="Join a Family" path={`/join/${familyId}`} noindex />
       <div className="mx-auto max-w-3xl space-y-8">
         <HowItWorks />
 

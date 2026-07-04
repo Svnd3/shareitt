@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { sendWelcomeEmail } from "../lib/sendEmail";
+import SeoHead from "../components/SeoHead";
 
 // Feature flags — flip these on once the corresponding provider is configured
 // in the Supabase dashboard (Authentication > Providers). Until then these
@@ -1278,6 +1279,12 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
 
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
+      <SeoHead
+        title="Sign In"
+        description="Sign in or create a ShareIt account to join or host shared subscription plans in Kenya."
+        path="/auth"
+        noindex
+      />
       <div className="mx-auto w-full max-w-md">
         {/* Card */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
