@@ -113,6 +113,27 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         `,
       };
     }
+    case "admin_new_signup": {
+      const { user_email, user_name, user_phone, method, signed_up_at } =
+        payload as Record<string, unknown>;
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        // Fixed recipient, not caller-supplied — this is an internal
+        // notification, so the destination isn't taken from payload.to.
+        to: "keninnofficial@gmail.com",
+        subject: "New ShareIt sign-up",
+        html: `
+          <p>A new user just signed up on ShareIt.</p>
+          <ul>
+            <li>Name: ${String(user_name || "Not provided")}</li>
+            <li>Email: ${String(user_email || "Not provided")}</li>
+            <li>Phone: ${String(user_phone || "Not provided")}</li>
+            <li>Method: ${String(method || "Not provided")}</li>
+            <li>Signed up at: ${String(signed_up_at || new Date().toISOString())}</li>
+          </ul>
+        `,
+      };
+    }
     case "member_removed": {
       const { to, member_name, service_name, host_name } = payload as Record<
         string,

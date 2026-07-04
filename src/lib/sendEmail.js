@@ -79,6 +79,22 @@ export async function sendSignInEmail({ email, name }) {
   });
 }
 
+export async function sendAdminNewSignupEmail({
+  userEmail,
+  userName,
+  userPhone,
+  method,
+  signedUpAt,
+}) {
+  await invokeEmailFunction("admin_new_signup", {
+    user_email: userEmail,
+    user_name: userName,
+    user_phone: userPhone,
+    method,
+    signed_up_at: signedUpAt,
+  });
+}
+
 export async function sendMemberRemovedEmail({
   email,
   memberName,

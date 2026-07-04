@@ -8,7 +8,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { supabase } from "./lib/supabaseClient";
-import { sendSignInEmail } from "./lib/sendEmail";
+import { sendSignInEmail, sendAdminNewSignupEmail } from "./lib/sendEmail";
 import Home from "./pages/Home";
 import Join from "./pages/Join";
 import Host from "./pages/Host";
@@ -324,6 +324,35 @@ function AppRoutes() {
               name: newSession.user.user_metadata?.full_name,
             }).catch((error) => {
               console.error("Sign-in email failed:", error);
+            });
+          }
+
+          // created_at and last_sign_in_at land within milliseconds of each
+          // other only on a brand-new account's very first session — every
+          // later sign-in moves last_sign_in_at forward while created_at
+          // stays fixed. Used instead of a "just signed up" flag so this
+          // catches every entry point (email/password, phone OTP, OAuth)
+          // from one place.
+          const createdAt = newSession.user.created_at
+            ? new Date(newSession.user.created_at).getTime()
+            : null;
+          const lastSignInAt = newSession.user.last_sign_in_at
+            ? new Date(newSession.user.last_sign_in_at).getTime()
+            : null;
+          const isNewSignup =
+            createdAt &&
+            lastSignInAt &&
+            Math.abs(lastSignInAt - createdAt) < 5000;
+
+          if (isNewSignup) {
+            sendAdminNewSignupEmail({
+              userEmail: newSession.user.email,
+              userName: newSession.user.user_metadata?.full_name,
+              userPhone: newSession.user.phone,
+              method: newSession.user.app_metadata?.provider,
+              signedUpAt: newSession.user.created_at,
+            }).catch((error) => {
+              console.error("Admin new-signup email failed:", error);
             });
           }
         }
