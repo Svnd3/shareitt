@@ -3,7 +3,19 @@
     {
       "source": "/(.*)",
       "has": [{ "type": "host", "value": "shareit-six.vercel.app" }],
-      "destination": "https://shareitt.xyz/$1",
+      "destination": "https://shareit.co.ke/$1",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "shareitt.xyz" }],
+      "destination": "https://shareit.co.ke/$1",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.shareitt.xyz" }],
+      "destination": "https://shareit.co.ke/$1",
       "permanent": true
     }
   ],
