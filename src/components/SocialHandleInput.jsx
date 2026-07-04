@@ -17,7 +17,7 @@ export default function SocialHandleInput({ onChange, placeholder }) {
           setPlatform(event.target.value);
           emit(event.target.value, handle);
         }}
-        className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 sm:w-44"
+        className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 sm:w-44"
       >
         {SOCIAL_PLATFORMS.map((option) => (
           <option key={option} value={option}>
@@ -33,7 +33,7 @@ export default function SocialHandleInput({ onChange, placeholder }) {
         }}
         type="text"
         placeholder={placeholder}
-        className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+        className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
       />
     </div>
   );

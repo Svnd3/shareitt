@@ -10,7 +10,7 @@ export default function Report() {
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
       <div className="mx-auto max-w-3xl space-y-8">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-700">
+          <p className="text-sm uppercase tracking-[0.3em] text-saddle-600">
             Report a problem
           </p>
           <h1 className="mt-3 text-3xl font-semibold text-slate-950">
@@ -56,7 +56,7 @@ export default function Report() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-sm text-emerald-900">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-700">
               <p className="font-semibold">Note</p>
               <p className="mt-2">
                 Keep your payment confirmation and WhatsApp chat handy so
@@ -65,7 +65,7 @@ export default function Report() {
             </div>
           </div>
 
-          <div className="mt-8 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
+          <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
             <p className="font-semibold">Member reporting only</p>
             <p className="mt-2">
               Only members of a full family may use this report email. Please

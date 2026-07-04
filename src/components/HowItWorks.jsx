@@ -49,14 +49,14 @@ export default function HowItWorks() {
               >
                 {/* Connector line */}
                 {index < steps.length - 1 && (
-                  <div className="absolute top-12 left-1/2 w-1/2 h-1 bg-gradient-to-r from-emerald-400 to-emerald-200 hidden lg:block" />
+                  <div className="absolute top-12 left-1/2 w-1/2 h-1 bg-gradient-to-r from-saddle-300 to-slate-200 hidden lg:block" />
                 )}
 
                 {/* Step circle */}
-                <div className="relative z-10 mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200">
+                <div className="relative z-10 mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200">
                   <div className="text-center">
                     <div className="text-3xl mb-1">{step.icon}</div>
-                    <div className="text-lg font-bold text-emerald-700">
+                    <div className="text-lg font-bold text-saddle-600">
                       {step.number}
                     </div>
                   </div>
@@ -83,10 +83,10 @@ export default function HowItWorks() {
           </h2>
 
           {/* Current step card */}
-          <div className="mb-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 p-8 text-center">
+          <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 p-8 text-center">
             <div className="text-5xl mb-4">{steps[currentStep].icon}</div>
-            <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-white border-2 border-emerald-600 mb-4">
-              <span className="text-lg font-bold text-emerald-700">
+            <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-white border-2 border-saddle-500 mb-4">
+              <span className="text-lg font-bold text-saddle-600">
                 {steps[currentStep].number}
               </span>
             </div>
@@ -107,7 +107,7 @@ export default function HowItWorks() {
                   onClick={() => setCurrentStep(index)}
                   className={`h-2 rounded-full transition ${
                     index === currentStep
-                      ? "w-8 bg-emerald-600"
+                      ? "w-8 bg-saddle-500"
                       : "w-2 bg-slate-300 hover:bg-slate-400"
                   }`}
                   aria-label={`Go to step ${index + 1}`}
@@ -130,7 +130,7 @@ export default function HowItWorks() {
                 onClick={() =>
                   setCurrentStep((prev) => (prev + 1) % steps.length)
                 }
-                className="flex-1 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                className="flex-1 rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-900"
               >
                 Next →
               </button>

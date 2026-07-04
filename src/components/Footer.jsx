@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import ShareItLogo from "../assets/shareitlogo.png";
+import ShareItLogo from "../assets/shareitlogo.webp";
 
 export default function Footer() {
   return (
@@ -9,7 +9,7 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <img src={ShareItLogo} alt="ShareIt" className="h-10 w-auto" />
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-400">
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-200">
                 ShareIt
               </p>
             </div>
@@ -25,16 +25,6 @@ export default function Footer() {
                   className="transition hover:text-white"
                 >
                   keninnofficial@gmail.com
-                </a>
-              </p>
-              <p>
-                <a
-                  href="https://wa.me/254741401230"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="transition hover:text-white"
-                >
-                  WhatsApp: 0741 401 230
                 </a>
               </p>
             </div>
@@ -85,25 +75,6 @@ export default function Footer() {
               Stay connected
             </h3>
             <ul className="mt-6 space-y-3 text-sm text-slate-300">
-              <li>
-                <a
-                  href="https://wa.me/254741401230"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="transition hover:text-white"
-                >
-                  WhatsApp
-                </a>{" "}
-                •{" "}
-                <a
-                  href="https://instagram.com/shareit"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="transition hover:text-white"
-                >
-                  Instagram
-                </a>
-              </li>
               <li>Built for trusted group sharing</li>
               <li>Customer support available daily</li>
             </ul>

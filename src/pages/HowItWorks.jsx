@@ -8,7 +8,7 @@ export default function HowItWorksPage() {
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-emerald-700">
+              <p className="text-sm uppercase tracking-[0.3em] text-saddle-600">
                 How it works
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-950">

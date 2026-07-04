@@ -10,11 +10,11 @@ import { useToast } from "../components/ToastProvider";
 import ServiceCard from "../components/ServiceCard";
 import FAQ from "../components/FAQ";
 import LoadingSpinner from "../components/LoadingSpinner";
-import ShareItLogo from "../assets/shareitlogo.png";
-import SpotifyImg from "../assets/spotify.jpg";
-import NetflixImg from "../assets/netflix.jpg";
-import ChatGPTImg from "../assets/chatgpt.jpg";
-import PrimeImg from "../assets/prime.jpg";
+import ShareItLogo from "../assets/shareitlogo.webp";
+import SpotifyImg from "../assets/spotify.webp";
+import NetflixImg from "../assets/netflix.webp";
+import ChatGPTImg from "../assets/chatgpt.webp";
+import PrimeImg from "../assets/prime.webp";
 import { SkeletonGrid } from "../components/SkeletonCard";
 
 const filters = [
@@ -364,7 +364,7 @@ export default function Home({ session, authLoading }) {
               <button
                 type="button"
                 onClick={handleShareApp}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -381,13 +381,13 @@ export default function Home({ session, authLoading }) {
                 </svg>
                 Share
               </button>
-              <a href="#faq" className="hover:text-emerald-600">
+              <a href="#faq" className="hover:text-slate-900">
                 FAQ
               </a>
-              <Link to="/host" className="hover:text-emerald-600">
+              <Link to="/host" className="hover:text-slate-900">
                 Host
               </Link>
-              <Link to="/report" className="hover:text-emerald-600">
+              <Link to="/report" className="hover:text-slate-900">
                 Report
               </Link>
               {authLoading ? (
@@ -467,7 +467,7 @@ export default function Home({ session, authLoading }) {
                     onClick={() => setCurrentSlide(idx)}
                     className={`h-2 rounded-full transition-all duration-300 ${
                       currentSlide === idx
-                        ? "w-8 bg-emerald-600"
+                        ? "w-8 bg-saddle-500"
                         : "w-2 bg-slate-300 hover:w-4 hover:bg-slate-400"
                     }`}
                     aria-label={`Show slide ${idx + 1}`}
@@ -491,7 +491,7 @@ export default function Home({ session, authLoading }) {
             <p className="text-xs font-bold text-slate-600 uppercase">
               Members
             </p>
-            <p className="mt-2 text-2xl font-bold text-emerald-600">
+            <p className="mt-2 text-2xl font-bold text-saddle-600">
               {membersSaved}
             </p>
           </div>
@@ -509,6 +509,26 @@ export default function Home({ session, authLoading }) {
           <h1 className="text-2xl font-bold text-slate-950">
             Share more. Spend less.
           </h1>
+        </section>
+
+        <section className="mb-4">
+          <div className="flex flex-col gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-bold text-emerald-950">
+                Want to share or sell tickets?
+              </p>
+              <p className="mt-1 text-sm text-emerald-900">
+                Create a ticket family too — list event, concert, or match
+                tickets the same way you'd share a subscription.
+              </p>
+            </div>
+            <Link
+              to="/host"
+              className="inline-flex items-center justify-center rounded-full bg-[#1A7A3C] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 sm:shrink-0"
+            >
+              Create a ticket family →
+            </Link>
+          </div>
         </section>
 
         <section className="space-y-4 py-4">
@@ -531,7 +551,7 @@ export default function Home({ session, authLoading }) {
                       }
                     }}
                     placeholder="Search families, services, or hosts"
-                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                   />
                 </label>
                 {suggestionsVisible && filteredSuggestions.length > 0 && (
@@ -811,7 +831,7 @@ export default function Home({ session, authLoading }) {
                   {familyView === "available" ? (
                     <>
                       No new families found. Click{" "}
-                      <Link to="/host" className="font-semibold text-emerald-700 hover:underline">
+                      <Link to="/host" className="font-semibold text-saddle-700 hover:underline">
                         Host
                       </Link>{" "}
                       to create your own.

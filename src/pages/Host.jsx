@@ -15,7 +15,7 @@ function LoadingOverlay({ message }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4">
       <div className="flex flex-col items-center gap-3 rounded-[2rem] bg-white p-8 shadow-2xl ring-1 ring-slate-200">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-400 border-t-transparent" />
         <p className="text-sm font-semibold text-slate-950">
           {message || "Loading..."}
         </p>
@@ -28,7 +28,6 @@ export default function Host() {
   const location = useLocation();
   const navigate = useNavigate();
   const [serviceName, setServiceName] = useState("");
-  const [serviceNameOption, setServiceNameOption] = useState("");
   const [hostName, setHostName] = useState("");
   const [hostPhone, setHostPhone] = useState("");
   const [pricePerSlot, setPricePerSlot] = useState("");
@@ -413,7 +412,6 @@ export default function Host() {
     setStatus("Family created.");
     setLoading(false);
     setServiceName("");
-    setServiceNameOption("");
     setHostName("");
     setHostPhone("");
     setPricePerSlot("");
@@ -495,7 +493,7 @@ export default function Host() {
           <button
             type="button"
             onClick={handleShareHostPage}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
           >
             <svg
               viewBox="0 0 24 24"
@@ -515,7 +513,7 @@ export default function Host() {
         </div>
 
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-700">
+          <p className="text-sm uppercase tracking-[0.3em] text-saddle-600">
             Host a family
           </p>
           <h1 className="mt-3 text-3xl font-semibold text-slate-950">
@@ -529,37 +527,22 @@ export default function Host() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <label className="space-y-2 text-sm text-slate-700">
               Service Name
-              <select
-                value={serviceNameOption}
-                onChange={(event) => {
-                  const option = event.target.value;
-                  setServiceNameOption(option);
-                  setServiceName(option === "Other" ? "" : option);
-                }}
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-              >
-                <option value="" disabled>
-                  Select a service
-                </option>
-                {SERVICE_NAME_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <input
+                value={serviceName}
+                onChange={(event) => setServiceName(event.target.value)}
+                type="text"
+                list="service-name-options"
+                placeholder="Select or type a service"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              />
+              <datalist id="service-name-options">
+                {SERVICE_NAME_OPTIONS.filter((option) => option !== "Other").map(
+                  (option) => (
+                    <option key={option} value={option} />
+                  ),
+                )}
+              </datalist>
             </label>
-            {serviceNameOption === "Other" && (
-              <label className="space-y-2 text-sm text-slate-700">
-                Custom Service Name
-                <input
-                  value={serviceName}
-                  onChange={(event) => setServiceName(event.target.value)}
-                  type="text"
-                  placeholder="e.g. HBO Max"
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-                />
-              </label>
-            )}
             <label className="space-y-2 text-sm text-slate-700">
               Your Name
               <input
@@ -567,7 +550,7 @@ export default function Host() {
                 onChange={(event) => setHostName(event.target.value)}
                 type="text"
                 placeholder="Amina K."
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
               />
             </label>
             <label className="space-y-2 text-sm text-slate-700">
@@ -577,12 +560,12 @@ export default function Host() {
                 onChange={(event) => setHostPhone(event.target.value)}
                 type="tel"
                 placeholder="+2547..."
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
               />
             </label>
             <label className="space-y-2 text-sm text-slate-700">
               Your Social Media{" "}
-              <span className="text-emerald-700">(required)</span>
+              <span className="text-saddle-600">(required)</span>
               <Tooltip content="Instagram, Telegram, X, Facebook, TikTok, Snapchat, or LinkedIn — helps members verify you" />
               <SocialHandleInput
                 key={socialFieldKey}
@@ -599,7 +582,7 @@ export default function Host() {
                   type="number"
                   min="1"
                   placeholder="250"
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                 />
               </label>
               <label className="space-y-2 text-sm text-slate-700">
@@ -611,7 +594,7 @@ export default function Host() {
                   type="number"
                   min="1"
                   placeholder="4"
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                 />
                 <span className="block text-xs text-slate-500">
                   Number of slots available to members joining you — not
@@ -619,7 +602,7 @@ export default function Host() {
                 </span>
               </label>
             </div>
-            <div className="space-y-3 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+            <div className="space-y-3 rounded-3xl border border-saddle-200 bg-saddle-50 p-5 text-sm text-saddle-900">
               <p className="font-semibold">Set up your WhatsApp group</p>
               <p className="text-slate-700">
                 We've generated a name for your group below. Copy it, open
@@ -637,7 +620,7 @@ export default function Host() {
                     <button
                       type="button"
                       onClick={handleCopyGroupName}
-                      className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
                     >
                       {groupNameCopied ? "Copied!" : "Copy name"}
                     </button>
@@ -652,7 +635,7 @@ export default function Host() {
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-emerald-700">
+                <p className="text-xs text-saddle-700">
                   Select a service above to generate a group name.
                 </p>
               )}
@@ -665,7 +648,7 @@ export default function Host() {
                 onChange={(event) => setWhatsappLink(event.target.value)}
                 type="url"
                 placeholder="https://chat.whatsapp.com/..."
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
               />
             </label>
             <div className="rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">

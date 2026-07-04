@@ -75,9 +75,10 @@ export default function ServiceCard({ family, userId, isMember = false }) {
   ];
 
   const handleFlag = (reason) => {
-    const waMsg = `Hi ShareIt, I'd like to flag this listing:\n\nService: ${family.service_name}\nHost: ${family.host_name}\nReason: ${reason}`;
+    const subject = `Flagging listing: ${family.service_name}`;
+    const body = `Service: ${family.service_name}\nHost: ${family.host_name}\nReason: ${reason}`;
     window.open(
-      `https://wa.me/254741401230?text=${encodeURIComponent(waMsg)}`,
+      `mailto:keninnofficial@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
       "_blank",
     );
     setFlagOpen(false);
@@ -92,7 +93,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
   const slotBadge =
     slotsLeft <= 1
       ? "bg-red-100 text-red-800"
-      : "bg-emerald-100 text-emerald-900";
+      : "bg-saddle-100 text-saddle-700";
   const brandDomain = getBrandDomain(family.service_name);
   const shouldShowFallbackLogo = !brandDomain || logoStage >= 2;
   const remainingFunding = slotsLeft * family.price_per_slot;
@@ -105,7 +106,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
   )}`;
 
   const logo = shouldShowFallbackLogo ? (
-    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-emerald-100 font-bold text-emerald-700">
+    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-slate-100 font-bold text-slate-600">
       {family.service_name?.[0]?.toUpperCase() || "S"}
     </div>
   ) : (
@@ -138,7 +139,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
         <p className="w-full truncate text-center text-xs font-medium text-slate-600">
           {family.service_name}
         </p>
-        <p className="text-center text-xs font-bold text-emerald-700">
+        <p className="text-center text-xs font-bold text-saddle-600">
           KSh {family.price_per_slot}
         </p>
       </div>
@@ -341,7 +342,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
                   You are the host
                 </span>
               ) : isMember ? (
-                <span className="inline-flex items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+                <span className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
                   Joined
                 </span>
               ) : (

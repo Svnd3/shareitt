@@ -298,7 +298,7 @@ export default function Join() {
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-emerald-700">
+              <p className="text-sm uppercase tracking-[0.3em] text-saddle-600">
                 Join a family
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-950">
@@ -393,7 +393,7 @@ export default function Join() {
               <p className="mt-2 text-sm text-slate-600">
                 Submit your details to join this family immediately.
               </p>
-              <div className="mt-4 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+              <div className="mt-4 rounded-3xl border border-saddle-200 bg-saddle-50 p-5 text-sm text-saddle-900">
                 <p className="font-semibold">Social confirmation required</p>
                 <p className="mt-2 text-slate-700">
                   Add at least two social media contacts so the host can confirm
@@ -411,7 +411,7 @@ export default function Join() {
                       onChange={(event) => setName(event.target.value)}
                       type="text"
                       placeholder="Jane Doe"
-                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                     />
                   </label>
                   <label className="space-y-2 text-sm text-slate-700">
@@ -430,7 +430,7 @@ export default function Join() {
                       }}
                       type="tel"
                       placeholder="+2547..."
-                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                     />
                     {phoneError && (
                       <p className="text-xs text-red-500 mt-1">{phoneError}</p>
@@ -444,12 +444,12 @@ export default function Join() {
                     onChange={(event) => setEmail(event.target.value)}
                     type="email"
                     placeholder="you@example.com"
-                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                   />
                 </label>
                 <label className="space-y-2 text-sm text-slate-700">
                   Social media contact 1{" "}
-                  <span className="text-emerald-700">(required)</span>
+                  <span className="text-saddle-600">(required)</span>
                   <Tooltip content="Instagram, Telegram, X, Facebook, TikTok, Snapchat, or LinkedIn for host verification" />
                   <SocialHandleInput
                     onChange={setSocialMedia1}
@@ -458,7 +458,7 @@ export default function Join() {
                 </label>
                 <label className="space-y-2 text-sm text-slate-700">
                   Social media contact 2{" "}
-                  <span className="text-emerald-700">(required)</span>
+                  <span className="text-saddle-600">(required)</span>
                   <Tooltip content="A different platform for added verification" />
                   <SocialHandleInput
                     onChange={setSocialMedia2}
@@ -477,7 +477,7 @@ export default function Join() {
                 </div>
               </form>
               {joined && family.whatsapp_group_link && (
-                <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-900">
+                <div className="mt-6 rounded-3xl border border-saddle-200 bg-saddle-50 p-5 text-sm text-saddle-900">
                   <p className="font-semibold">Next step</p>
                   <p className="mt-2">
                     You have been added to the family. Use the WhatsApp group

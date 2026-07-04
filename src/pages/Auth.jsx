@@ -313,7 +313,7 @@ function Field({
           maxLength={maxLength}
           autoCorrect="off"
           spellCheck="false"
-          className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-3 focus:ring-emerald-100 ${showToggle ? "pr-12" : ""}`}
+          className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-3 focus:ring-slate-100 ${showToggle ? "pr-12" : ""}`}
         />
         {showToggle && onToggle && (
           <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto">
