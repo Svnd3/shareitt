@@ -348,6 +348,20 @@ function AppRoutes() {
           return;
         }
 
+        // supabase-js fires this dedicated event whenever a session comes
+        // from a recovery link, regardless of whether the redirect carried
+        // hash tokens, a PKCE code, or a bare type=recovery param — unlike
+        // parsing the URL ourselves (see init() above), this doesn't depend
+        // on GoTrue preserving "type=recovery" through the redirect.
+        if (event === "PASSWORD_RECOVERY") {
+          passwordRecoveryRef.current = true;
+          setPasswordRecovery(true);
+          if (window.location.pathname !== "/auth") {
+            navigate("/auth", { replace: true });
+          }
+          return;
+        }
+
         if (!newSession?.user?.id) return;
 
         // Skip entirely during password recovery — the user needs to land
