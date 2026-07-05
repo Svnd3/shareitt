@@ -68,14 +68,17 @@ export async function sendWelcomeEmail({ email, name }) {
   });
 }
 
-export async function sendSignInEmail({ email, name }) {
-  if (!email) {
-    throw new Error("Missing user email.");
-  }
-
-  await invokeEmailFunction("sign_in", {
-    to: email,
-    name,
+export async function sendAdminLoginReportEmail({
+  userEmail,
+  userName,
+  method,
+  signedInAt,
+}) {
+  await invokeEmailFunction("admin_login_report", {
+    user_email: userEmail,
+    user_name: userName,
+    method,
+    signed_in_at: signedInAt,
   });
 }
 

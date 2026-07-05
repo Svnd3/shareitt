@@ -97,19 +97,23 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         `,
       };
     }
-    case "sign_in": {
-      const { to, name } = payload as Record<string, unknown>;
-      if (!to) {
-        throw new Error("Missing sign-in email fields.");
-      }
+    case "admin_login_report": {
+      const { user_email, user_name, method, signed_in_at } =
+        payload as Record<string, unknown>;
       return {
         from: "ShareIt <no-reply@shareitt.xyz>",
-        to,
-        subject: "New sign-in to your ShareIt account",
+        // Fixed recipient, not caller-supplied — this is an internal
+        // notification, so the destination isn't taken from payload.to.
+        to: "keninnofficial@gmail.com",
+        subject: "ShareIt login report",
         html: `
-          <p>Hi ${String(name || "there")},</p>
-          <p>We noticed a new sign-in to your ShareIt account.</p>
-          <p>If this was you, no action is needed. If you don't recognize this activity, please reset your password right away.</p>
+          <p>A user just signed in to ShareIt.</p>
+          <ul>
+            <li>Name: ${String(user_name || "Not provided")}</li>
+            <li>Email: ${String(user_email || "Not provided")}</li>
+            <li>Method: ${String(method || "Not provided")}</li>
+            <li>Signed in at: ${String(signed_in_at || new Date().toISOString())}</li>
+          </ul>
         `,
       };
     }

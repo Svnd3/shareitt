@@ -8,7 +8,10 @@ import {
   Navigate,
 } from "react-router-dom";
 import { supabase } from "./lib/supabaseClient";
-import { sendSignInEmail, sendAdminNewSignupEmail } from "./lib/sendEmail";
+import {
+  sendAdminLoginReportEmail,
+  sendAdminNewSignupEmail,
+} from "./lib/sendEmail";
 import Home from "./pages/Home";
 import Join from "./pages/Join";
 import Host from "./pages/Host";
@@ -96,6 +99,12 @@ function AppRoutes() {
   // signed-in redirects.
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const passwordRecoveryRef = useRef(false);
+  // supabase-js re-fires SIGNED_IN (not just TOKEN_REFRESHED) when a tab
+  // regains focus and silently refreshes its token — without this guard
+  // every tab-switch would trigger another login-report email. Tracks the
+  // last user id we've already reported on, cleared on SIGNED_OUT so the
+  // next real sign-in (same or different user) reports again.
+  const lastReportedUserId = useRef(null);
 
   // Main auth init — runs once on mount
   useEffect(() => {
@@ -254,6 +263,7 @@ function AppRoutes() {
         if (!mounted) return;
 
         setSession(currentSession);
+        lastReportedUserId.current = currentSession?.user?.id ?? null;
 
         if (currentSession?.user?.id) {
           if (isRecovery) {
@@ -313,19 +323,24 @@ function AppRoutes() {
 
         setSession(newSession);
 
+        if (event === "SIGNED_OUT") {
+          lastReportedUserId.current = null;
+          return;
+        }
+
         if (!newSession?.user?.id) return;
 
         // Skip entirely during password recovery — the user needs to land
         // on the "set new password" form, not get bounced into the app.
-        if (event === "SIGNED_IN" && !passwordRecoveryRef.current) {
-          if (newSession.user.email) {
-            sendSignInEmail({
-              email: newSession.user.email,
-              name: newSession.user.user_metadata?.full_name,
-            }).catch((error) => {
-              console.error("Sign-in email failed:", error);
-            });
-          }
+        // Also skip if we've already reported this user's session — tab
+        // focus silently refreshes the token and re-fires SIGNED_IN, which
+        // would otherwise send a duplicate report on every tab switch.
+        if (
+          event === "SIGNED_IN" &&
+          !passwordRecoveryRef.current &&
+          lastReportedUserId.current !== newSession.user.id
+        ) {
+          lastReportedUserId.current = newSession.user.id;
 
           // created_at and last_sign_in_at land within milliseconds of each
           // other only on a brand-new account's very first session — every
@@ -344,6 +359,10 @@ function AppRoutes() {
             lastSignInAt &&
             Math.abs(lastSignInAt - createdAt) < 5000;
 
+          // Resend's free tier is quota-limited, so only one notification
+          // goes out per sign-in — the admin report, not a "you signed in"
+          // email to the user. New signups still get their own admin email;
+          // returning logins get the login report instead.
           if (isNewSignup) {
             sendAdminNewSignupEmail({
               userEmail: newSession.user.email,
@@ -353,6 +372,15 @@ function AppRoutes() {
               signedUpAt: newSession.user.created_at,
             }).catch((error) => {
               console.error("Admin new-signup email failed:", error);
+            });
+          } else {
+            sendAdminLoginReportEmail({
+              userEmail: newSession.user.email,
+              userName: newSession.user.user_metadata?.full_name,
+              method: newSession.user.app_metadata?.provider,
+              signedInAt: newSession.user.last_sign_in_at,
+            }).catch((error) => {
+              console.error("Admin login-report email failed:", error);
             });
           }
         }
