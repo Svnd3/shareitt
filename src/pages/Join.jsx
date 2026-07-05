@@ -412,6 +412,11 @@ export default function Join() {
               <p className="mt-2 text-lg font-semibold text-slate-950">
                 {family.is_verified ? "✓ Verified" : "Pending"}
               </p>
+              {!family.is_verified && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Usually takes 2-15 minutes
+                </p>
+              )}
             </div>
             <div className="rounded-3xl bg-[#E8F5FF] p-5">
               <p className="text-sm text-slate-600">Total slots</p>

@@ -145,3 +145,50 @@ $$;
 
 revoke all on function public.increment_family_slot(uuid) from public;
 grant execute on function public.increment_family_slot(uuid) to authenticated;
+
+-- ── Auto-verification ──────────────────────────────────────────────────────
+-- New listings show "Pending Review" until verified. Rather than requiring
+-- manual review, families auto-verify 3 minutes after creation. This runs as
+-- the row owner (SECURITY DEFINER) since "families_update_own" would
+-- otherwise block anon/other-user callers from flipping is_verified on
+-- someone else's listing.
+create or replace function public.auto_verify_families()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update families
+  set is_verified = true
+  where is_verified = false
+    and created_at <= now() - interval '3 minutes';
+end;
+$$;
+
+revoke all on function public.auto_verify_families() from public;
+grant execute on function public.auto_verify_families() to anon, authenticated;
+
+-- One-time backfill: verify every family that already exists today so
+-- nobody is stuck on "Pending Review" from before this feature shipped.
+update families set is_verified = true where is_verified = false;
+
+-- Belt-and-suspenders scheduler: if pg_cron is available on this project,
+-- run the sweep every minute so verification happens even with no traffic.
+-- The app also calls auto_verify_families() opportunistically on page load
+-- (see Home.jsx) as a fallback for projects where pg_cron isn't enabled.
+do $$
+begin
+  create extension if not exists pg_cron with schema extensions;
+
+  perform cron.unschedule('auto-verify-families')
+  where exists (select 1 from cron.job where jobname = 'auto-verify-families');
+
+  perform cron.schedule(
+    'auto-verify-families',
+    '* * * * *',
+    $sql$select public.auto_verify_families();$sql$
+  );
+exception when others then
+  raise notice 'pg_cron not available — relying on client-triggered auto_verify_families() calls instead.';
+end $$;

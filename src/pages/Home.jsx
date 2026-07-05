@@ -158,6 +158,27 @@ export default function Home({ session, authLoading }) {
       }
 
       try {
+        // Opportunistically sweep for families past the 3-minute
+        // auto-verify window before loading the list, so "Pending Review"
+        // clears as soon as someone visits the page — belt-and-suspenders
+        // alongside the pg_cron schedule (see supabase_rls_policies.sql),
+        // for projects where pg_cron isn't enabled. Best-effort: a failure
+        // here shouldn't block the family list from loading.
+        try {
+          await fetch(`${supabaseUrl}/rest/v1/rpc/auto_verify_families`, {
+            method: "POST",
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+              "Content-Type": "application/json",
+            },
+            body: "{}",
+            signal: AbortSignal.timeout(5000),
+          });
+        } catch (verifyError) {
+          console.error("auto_verify_families sweep failed:", verifyError);
+        }
+
         // Bypass the supabase-js auth client for this read: "families" is
         // publicly readable under RLS (using (true)), and going through
         // supabase.from() would block on the client's internal auth lock if

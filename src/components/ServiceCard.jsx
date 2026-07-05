@@ -19,6 +19,7 @@ const BRAND_KEYWORDS = [
   ["amazon", "amazon.com"],
   ["disney", "disneyplus.com"],
   ["showmax", "showmax.com"],
+  ["dstv", "dstv.com"],
   ["apple", "apple.com"],
   ["chatgpt", "openai.com"],
   ["openai", "openai.com"],
@@ -306,14 +307,21 @@ export default function ServiceCard({ family, userId, isMember = false }) {
 
             {/* Badges */}
             <div className="mt-5 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span
-                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${
-                  family.is_active_host
-                    ? "bg-sky-100 text-sky-800 border-sky-200"
-                    : "bg-slate-50 text-slate-600 border-slate-300"
-                }`}
-              >
-                {family.is_active_host ? "✓ Verified" : "Pending Review"}
+              <span className="inline-flex flex-col gap-1">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${
+                    family.is_verified
+                      ? "bg-sky-100 text-sky-800 border-sky-200"
+                      : "bg-slate-50 text-slate-600 border-slate-300"
+                  }`}
+                >
+                  {family.is_verified ? "✓ Verified" : "Pending Review"}
+                </span>
+                {!family.is_verified && (
+                  <span className="text-xs text-slate-500">
+                    Usually takes 2-15 minutes
+                  </span>
+                )}
               </span>
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm ${slotBadge}`}
