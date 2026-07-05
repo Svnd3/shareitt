@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../lib/supabaseClient";
-import { sendMembershipRequestEmail } from "../lib/sendEmail";
+import {
+  sendMembershipRequestEmail,
+  sendHostNewMemberEmail,
+  sendAdminNewMemberEmail,
+} from "../lib/sendEmail";
 import SeoHead from "../components/SeoHead";
 import { defaultFamilies } from "../data/defaultFamilies";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -9,6 +13,8 @@ import { useToast } from "../components/ToastProvider";
 import Tooltip from "../components/Tooltip";
 import SocialHandleInput from "../components/SocialHandleInput";
 import HowItWorks from "../components/HowItWorks";
+import TierPaywall from "../components/TierPaywall";
+import { getUserCapacity, consumeCapacity } from "../lib/payments";
 
 export default function Join() {
   const { familyId } = useParams();
@@ -26,7 +32,18 @@ export default function Join() {
   const [joined, setJoined] = useState(false);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [capacity, setCapacity] = useState({
+    hostRemaining: 0,
+    joinRemaining: 0,
+    unlimitedActive: false,
+  });
+  const [showPaywall, setShowPaywall] = useState(false);
   const toast = useToast();
+
+  const refreshCapacity = async (userId) => {
+    if (!userId) return;
+    setCapacity(await getUserCapacity(userId));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -116,13 +133,19 @@ export default function Join() {
     return () => authListener?.subscription?.unsubscribe?.();
   }, []);
 
+  useEffect(() => {
+    if (session?.user?.id) {
+      refreshCapacity(session.user.id);
+    }
+  }, [session]);
+
   const handleShareFamily = async () => {
     if (!family) {
-      toast.showToast("Unable to share family details.", "error");
+      toast.showToast("Unable to share group details.", "error");
       return;
     }
 
-    const shareText = `Join \"${family.service_name}\" family hosted by ${family.host_name}. Price: KSh ${family.price_per_slot}/slot. ${family.total_slots - family.filled_slots} slots available.`;
+    const shareText = `Join \"${family.service_name}\" group hosted by ${family.host_name}. Price: KSh ${family.price_per_slot}/slot. ${family.total_slots - family.filled_slots} slots available.`;
     const shareUrl = `${window.location.origin}/join/${family.id}`;
     const payload = `${shareText} ${shareUrl}`;
 
@@ -133,10 +156,10 @@ export default function Join() {
           text: shareText,
           url: shareUrl,
         });
-        toast.showToast("Family shared successfully!", "success");
+        toast.showToast("Group shared successfully!", "success");
       } else {
         await navigator.clipboard.writeText(payload);
-        toast.showToast("Family link copied to clipboard!", "success");
+        toast.showToast("Group link copied to clipboard!", "success");
       }
     } catch (error) {
       if (error?.name !== "AbortError") {
@@ -174,20 +197,38 @@ export default function Join() {
     }
 
     if (!family) {
-      toast.showToast("Unable to load family details.", "error");
+      toast.showToast("Unable to load group details.", "error");
       return;
     }
 
     if (family.created_by === session?.user?.id) {
-      toast.showToast("You cannot join your own family.", "warning");
+      toast.showToast("You cannot join your own group.", "warning");
       return;
     }
 
     if (family.filled_slots >= family.total_slots) {
-      toast.showToast("This family is already full.", "warning");
+      toast.showToast("This group is already full.", "warning");
       return;
     }
 
+    if (capacity.joinRemaining > 0 || capacity.unlimitedActive) {
+      await joinFamilyNow();
+      return;
+    }
+
+    setShowPaywall(true);
+  };
+
+  const handlePaywallSuccess = async () => {
+    setShowPaywall(false);
+    if (session?.user?.id) {
+      await refreshCapacity(session.user.id);
+    }
+    await joinFamilyNow();
+  };
+
+  const joinFamilyNow = async () => {
+    const trimmedPhone = phone.trim();
     setLoading(true);
 
     const { data: existingMember, error: existingError } = await supabase
@@ -207,7 +248,7 @@ export default function Join() {
     }
 
     if (existingMember) {
-      toast.showToast("You are already a member of this family.", "info");
+      toast.showToast("You are already a member of this group.", "info");
       setLoading(false);
       return;
     }
@@ -223,7 +264,7 @@ export default function Join() {
     });
 
     if (insertError) {
-      toast.showToast("Could not join this family. Please try again.", "error");
+      toast.showToast("Could not join this group. Please try again.", "error");
       setLoading(false);
       return;
     }
@@ -250,8 +291,31 @@ export default function Join() {
       });
     }
 
+    sendHostNewMemberEmail({
+      familyId: family.id,
+      memberName: name.trim(),
+    }).catch((error) => {
+      console.error("Host new member email failed:", error);
+    });
+
+    sendAdminNewMemberEmail({
+      memberName: name.trim(),
+      family,
+    }).catch((error) => {
+      console.error("Admin new member email failed:", error);
+    });
+
+    try {
+      await consumeCapacity("join");
+    } catch (capacityError) {
+      console.error("Consume join capacity failed:", capacityError);
+    }
+    if (session?.user?.id) {
+      await refreshCapacity(session.user.id);
+    }
+
     toast.showToast(
-      "Joined successfully! You are now a member of this family.",
+      "Joined successfully! You are now a member of this group.",
       "success",
     );
     setJoined(true);
@@ -276,13 +340,13 @@ export default function Join() {
   if (!session) {
     return (
       <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
-        <SeoHead title="Join a Family" path={`/join/${familyId}`} noindex />
+        <SeoHead title="Join a Group" path={`/join/${familyId}`} noindex />
         <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-2xl font-semibold text-slate-950">
             Sign in to join
           </h1>
           <p className="mt-4 text-slate-600">
-            You need to sign in or sign up before joining a family.
+            You need to sign in or sign up before joining a group.
           </p>
           <div className="mt-8 flex justify-center">
             <Link
@@ -302,7 +366,7 @@ export default function Join() {
     return (
       <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
         <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
-          <LoadingSpinner message="Loading family details…" />
+          <LoadingSpinner message="Loading group details…" />
         </div>
       </main>
     );
@@ -311,21 +375,21 @@ export default function Join() {
   if (!family) {
     return (
       <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
-        <SeoHead title="Join a Family" path={`/join/${familyId}`} noindex />
+        <SeoHead title="Join a Group" path={`/join/${familyId}`} noindex />
         <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-2xl font-semibold text-slate-950">
-            Family not found
+            Group not found
           </h1>
           <p className="mt-4 text-slate-600">
-            We could not find that family. Return to the homepage and browse
-            active families.
+            We could not find that group. Return to the homepage and browse
+            active groups.
           </p>
           <div className="mt-8 flex justify-center gap-3">
             <Link
               to="/"
               className="rounded-full bg-[#1A7A3C] px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
             >
-              Browse families
+              Browse groups
             </Link>
             <button
               type="button"
@@ -344,7 +408,16 @@ export default function Join() {
 
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
-      <SeoHead title="Join a Family" path={`/join/${familyId}`} noindex />
+      <SeoHead title="Join a Group" path={`/join/${familyId}`} noindex />
+      {showPaywall && (
+        <TierPaywall
+          action="join"
+          userEmail={session?.user?.email}
+          accessToken={session?.access_token}
+          onSuccess={handlePaywallSuccess}
+          onClose={() => setShowPaywall(false)}
+        />
+      )}
       <div className="mx-auto max-w-3xl space-y-8">
         <HowItWorks />
 
@@ -352,7 +425,7 @@ export default function Join() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-saddle-600">
-                Join a family
+                Join a group
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-950">
                 {family.service_name}
@@ -430,7 +503,7 @@ export default function Join() {
             <p className="font-semibold">Direct payment to host</p>
             <p className="mt-2 text-slate-700">
               Payments go directly to the host via WhatsApp, outside ShareIt
-              — ShareIt is not liable for payment disputes for this family.
+              — ShareIt is not liable for payment disputes for this group.
               ShareIt's role is only to help you connect, so always verify
               the host's details before sending money.
             </p>
@@ -439,17 +512,17 @@ export default function Join() {
 
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <h2 className="text-2xl font-semibold text-slate-950">
-            Join the family
+            Join the group
           </h2>
           {family.created_by === session?.user?.id ? (
             <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-700">
-              You are the host of this family. You cannot join your own family.
+              You are the host of this group. You cannot join your own group.
               Manage it from the host dashboard instead.
             </div>
           ) : (
             <>
               <p className="mt-2 text-sm text-slate-600">
-                Submit your details to join this family immediately.
+                Submit your details to join this group immediately.
               </p>
               <div className="mt-4 rounded-3xl border border-saddle-200 bg-saddle-50 p-5 text-sm text-saddle-900">
                 <p className="font-semibold">Social confirmation required</p>
@@ -538,7 +611,7 @@ export default function Join() {
                 <div className="mt-6 rounded-3xl border border-saddle-200 bg-saddle-50 p-5 text-sm text-saddle-900">
                   <p className="font-semibold">Next step</p>
                   <p className="mt-2">
-                    You have been added to the family. Use the WhatsApp group
+                    You have been added to the group. Use the WhatsApp group
                     link below to connect with the host and other members.
                   </p>
                   <a

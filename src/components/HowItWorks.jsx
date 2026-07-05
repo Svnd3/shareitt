@@ -8,14 +8,14 @@ export default function HowItWorks() {
       number: 1,
       title: "Browse",
       description:
-        "Explore live family listings for your favorite subscriptions",
+        "Explore live group listings for your favorite subscriptions",
       icon: "🔍",
     },
     {
       number: 2,
-      title: "Join for free",
+      title: "Pick a plan",
       description:
-        "Submit your details and two social media contacts so the host can verify you",
+        "Submit your details, then choose a small platform plan (from KSh 20) to confirm your spot",
       icon: "📝",
     },
     {

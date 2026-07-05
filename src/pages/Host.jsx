@@ -5,12 +5,15 @@ import SeoHead from "../components/SeoHead";
 import {
   sendHostRegistrationEmail,
   sendMemberRemovedEmail,
+  sendAdminNewFamilyEmail,
 } from "../lib/sendEmail";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../components/ToastProvider";
 import Tooltip from "../components/Tooltip";
 import SocialHandleInput from "../components/SocialHandleInput";
 import { SERVICE_NAME_OPTIONS } from "../lib/services";
+import TierPaywall from "../components/TierPaywall";
+import { getUserCapacity, consumeCapacity } from "../lib/payments";
 
 function LoadingOverlay({ message }) {
   return (
@@ -45,7 +48,18 @@ export default function Host() {
   const [joinedFamilies, setJoinedFamilies] = useState([]);
   const [familyMembers, setFamilyMembers] = useState({});
   const [managementLoading, setManagementLoading] = useState(false);
+  const [capacity, setCapacity] = useState({
+    hostRemaining: 0,
+    joinRemaining: 0,
+    unlimitedActive: false,
+  });
+  const [showPaywall, setShowPaywall] = useState(false);
   const toast = useToast();
+
+  const refreshCapacity = async (userId) => {
+    if (!userId) return;
+    setCapacity(await getUserCapacity(userId));
+  };
 
   const loadHostData = async (userId) => {
     setManagementLoading(true);
@@ -134,6 +148,7 @@ export default function Host() {
   useEffect(() => {
     if (session?.user?.id) {
       loadHostData(session.user.id);
+      refreshCapacity(session.user.id);
     } else {
       setMyFamilies([]);
       setFamilyMembers({});
@@ -148,13 +163,13 @@ export default function Host() {
   const handleDeleteFamily = async (familyId) => {
     if (
       !window.confirm(
-        "Delete this family and all its members? This cannot be undone.",
+        "Delete this group and all its members? This cannot be undone.",
       )
     ) {
       return;
     }
 
-    setStatus("Removing family listing...");
+    setStatus("Removing group listing...");
     setLoading(true);
 
     const { error: membersError } = await supabase
@@ -164,7 +179,7 @@ export default function Host() {
 
     if (membersError) {
       console.error("Members deletion error:", membersError);
-      setStatus("Unable to delete family members. Please try again.");
+      setStatus("Unable to delete group members. Please try again.");
       setLoading(false);
       return;
     }
@@ -177,7 +192,7 @@ export default function Host() {
 
     if (error) {
       console.error("Family deletion error:", error);
-      setStatus("Unable to delete the family right now. Please try again.");
+      setStatus("Unable to delete the group right now. Please try again.");
       setLoading(false);
       return;
     }
@@ -188,7 +203,7 @@ export default function Host() {
       await refreshHostData(session.user.id);
     }
 
-    setStatus("Family removed successfully.");
+    setStatus("Group removed successfully.");
     setLoading(false);
   };
 
@@ -197,13 +212,13 @@ export default function Host() {
     setLoading(true);
 
     const shareText =
-      "I’m hosting family subscription listings on ShareIt Kenya. Join live families for free and connect through WhatsApp to save on services together. ";
+      "I’m hosting group subscription listings on ShareIt Kenya. Join live groups for free and connect through WhatsApp to save on services together. ";
     const shareUrl = window.location.origin + "/host";
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: "Host families on ShareIt",
+          title: "Host groups on ShareIt",
           text: `${shareText}${shareUrl}`,
           url: shareUrl,
         });
@@ -265,14 +280,14 @@ export default function Host() {
       sendMemberRemovedEmail({
         email: memberToRemove.email,
         memberName: memberToRemove.name,
-        serviceName: updatedFamily?.service_name || "your family",
+        serviceName: updatedFamily?.service_name || "your group",
         hostName: updatedFamily?.host_name || "your host",
       }).catch((error) => {
         console.error("Member removed email failed:", error);
       });
     }
 
-    setStatus("Member removed from the family.");
+    setStatus("Member removed from the group.");
     setLoading(false);
   };
 
@@ -280,13 +295,13 @@ export default function Host() {
     if (!family) return;
     if (
       !window.confirm(
-        "Leave this family? You can rejoin later if slots are available.",
+        "Leave this group? You can rejoin later if slots are available.",
       )
     ) {
       return;
     }
 
-    setStatus("Leaving family...");
+    setStatus("Leaving group...");
     setLoading(true);
 
     const { error } = await supabase
@@ -298,7 +313,7 @@ export default function Host() {
 
     if (error) {
       console.error("Leave family error:", error);
-      setStatus("Unable to leave this family. Please try again.");
+      setStatus("Unable to leave this group. Please try again.");
       setLoading(false);
       return;
     }
@@ -314,15 +329,15 @@ export default function Host() {
       current.filter((joined) => joined.id !== family.id),
     );
 
-    setStatus("You have left the family.");
+    setStatus("You have left the group.");
     setLoading(false);
   };
 
   const handleToggleLiveStatus = async (familyId, currentStatus) => {
     setStatus(
       currentStatus
-        ? "Removing from live families..."
-        : "Making family live...",
+        ? "Removing from live groups..."
+        : "Making group live...",
     );
     setLoading(true);
 
@@ -334,7 +349,7 @@ export default function Host() {
 
     if (error) {
       console.error("Live status toggle error:", error);
-      setStatus("Unable to update family status. Please try again.");
+      setStatus("Unable to update group status. Please try again.");
       setLoading(false);
       return;
     }
@@ -345,8 +360,8 @@ export default function Host() {
 
     setStatus(
       currentStatus
-        ? "Family removed from live listings."
-        : "Family is now live!",
+        ? "Group removed from live listings."
+        : "Group is now live!",
     );
     setLoading(false);
   };
@@ -366,22 +381,9 @@ export default function Host() {
     }
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (
-      !serviceName.trim() ||
-      !hostName.trim() ||
-      !hostPhone.trim() ||
-      !pricePerSlot ||
-      !totalSlots ||
-      !hostSocial1.trim()
-    ) {
-      setStatus("Please complete all required fields.");
-      return;
-    }
-
+  const createFamilyListing = async () => {
     setLoading(true);
-    setStatus("Saving your family listing...");
+    setStatus("Saving your group listing...");
 
     const { error } = await supabase.from("families").insert([
       {
@@ -404,13 +406,13 @@ export default function Host() {
     if (error) {
       console.error("Supabase error:", error);
       setStatus(
-        `Error: ${error.message || "Unable to create family listing. Please try again."}`,
+        `Error: ${error.message || "Unable to create group listing. Please try again."}`,
       );
       setLoading(false);
       return;
     }
 
-    setStatus("Family created.");
+    setStatus("Group created.");
     setLoading(false);
     setServiceName("");
     setHostName("");
@@ -436,11 +438,60 @@ export default function Host() {
       });
     }
 
+    sendAdminNewFamilyEmail({
+      family: {
+        host_name: hostName,
+        service_name: serviceName,
+        total_slots: Number(totalSlots),
+        price_per_slot: Number(pricePerSlot),
+        whatsapp_group_link: whatsappLink,
+      },
+    }).catch((error) => {
+      console.error("Admin new group email failed:", error);
+    });
+
+    try {
+      await consumeCapacity("host");
+    } catch (capacityError) {
+      console.error("Consume host capacity failed:", capacityError);
+    }
+
     if (session?.user?.id) {
       await refreshHostData(session.user.id);
+      await refreshCapacity(session.user.id);
     }
 
     setTimeout(() => navigate("/"), 2000);
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (
+      !serviceName.trim() ||
+      !hostName.trim() ||
+      !hostPhone.trim() ||
+      !pricePerSlot ||
+      !totalSlots ||
+      !hostSocial1.trim()
+    ) {
+      setStatus("Please complete all required fields.");
+      return;
+    }
+
+    if (capacity.hostRemaining > 0 || capacity.unlimitedActive) {
+      await createFamilyListing();
+      return;
+    }
+
+    setShowPaywall(true);
+  };
+
+  const handlePaywallSuccess = async () => {
+    setShowPaywall(false);
+    if (session?.user?.id) {
+      await refreshCapacity(session.user.id);
+    }
+    await createFamilyListing();
   };
 
   if (authLoading) {
@@ -450,13 +501,13 @@ export default function Host() {
   if (!session) {
     return (
       <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
-        <SeoHead title="Host a Family" path="/host" noindex />
+        <SeoHead title="Host a Group" path="/host" noindex />
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-3xl font-semibold text-slate-950">
             Sign in to host
           </h1>
           <p className="mt-4 text-slate-600">
-            You need to sign in or sign up before creating a family.
+            You need to sign in or sign up before creating a group.
           </p>
           <div className="mt-8">
             <Link
@@ -482,8 +533,17 @@ export default function Host() {
 
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
-      <SeoHead title="Host a Family" path="/host" noindex />
+      <SeoHead title="Host a Group" path="/host" noindex />
       {loading && <LoadingOverlay message={status || "Processing…"} />}
+      {showPaywall && (
+        <TierPaywall
+          action="host"
+          userEmail={session?.user?.email}
+          accessToken={session?.access_token}
+          onSuccess={handlePaywallSuccess}
+          onClose={() => setShowPaywall(false)}
+        />
+      )}
       <div className="mx-auto max-w-3xl space-y-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
@@ -517,10 +577,10 @@ export default function Host() {
 
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-sm uppercase tracking-[0.3em] text-saddle-600">
-            Host a family
+            Host a group
           </p>
           <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-            Create your family listing
+            Create your group listing
           </h1>
           <p className="mt-4 text-slate-600">
             Share a service, set your price, and start receiving join requests
@@ -676,7 +736,7 @@ export default function Host() {
                 disabled={loading}
                 className="inline-flex w-full items-center justify-center rounded-full bg-[#1A7A3C] px-6 py-4 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                {loading ? "Saving…" : "Create family"}
+                {loading ? "Saving…" : "Create group"}
               </button>
               {status && <p className="text-sm text-slate-700">{status}</p>}
             </div>
@@ -690,18 +750,18 @@ export default function Host() {
                 My listings
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Manage your families and members
+                Manage your groups and members
               </h2>
             </div>
           </div>
 
           {managementLoading ? (
             <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-600">
-              Loading your hosted families…
+              Loading your hosted groups…
             </div>
           ) : myFamilies.length === 0 ? (
             <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-600">
-              You don't have any hosted families yet. Create one above to manage
+              You don't have any hosted groups yet. Create one above to manage
               members and remove listings.
             </div>
           ) : (
@@ -828,21 +888,21 @@ export default function Host() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-slate-700">
-                Joined families
+                Joined groups
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Families you have joined
+                Groups you have joined
               </h2>
             </div>
           </div>
 
           {managementLoading ? (
             <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-600">
-              Loading joined families…
+              Loading joined groups…
             </div>
           ) : joinedFamilies.length === 0 ? (
             <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-slate-600">
-              You haven't joined any families yet. Browse available families to
+              You haven't joined any groups yet. Browse available groups to
               join.
             </div>
           ) : (
@@ -892,7 +952,7 @@ export default function Host() {
                       disabled={loading}
                       className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
                     >
-                      Leave family
+                      Leave group
                     </button>
                   </div>
                 </div>

@@ -103,9 +103,9 @@ export default function Home({ session, authLoading }) {
       serviceSlug ? `/?service=${encodeURIComponent(serviceSlug)}` : ""
     }`;
     const shareText =
-      "Save on subscriptions with ShareIt Kenya. Browse live family listings for free and join WhatsApp groups to share services together. ";
+      "Save on subscriptions with ShareIt Kenya. Browse live group listings for free and join WhatsApp groups to share services together. ";
     const sharePayload = {
-      title: "ShareIt — Kenya subscription families",
+      title: "ShareIt — Kenya subscription groups",
       text: `${shareText}${shareUrl}`,
       url: shareUrl,
     };
@@ -205,7 +205,7 @@ export default function Home({ session, authLoading }) {
         if (cancelled) return;
 
         if (!response.ok) {
-          throw new Error(`Unable to load families (status ${response.status}).`);
+          throw new Error(`Unable to load groups (status ${response.status}).`);
         }
 
         const data = await response.json();
@@ -216,9 +216,9 @@ export default function Home({ session, authLoading }) {
         console.error("Home fetch families exception:", error);
         setFetchError(
           error?.name === "AbortError" || error?.name === "TimeoutError"
-            ? "Loading families timed out. The database may be waking up — please refresh."
+            ? "Loading groups timed out. The database may be waking up — please refresh."
             : error?.message ||
-                "Unable to load families from Supabase. Please check your environment and RLS policies.",
+                "Unable to load groups from Supabase. Please check your environment and RLS policies.",
         );
         setFamilies([]);
       } finally {
@@ -360,7 +360,7 @@ export default function Home({ session, authLoading }) {
     return (
       <main className="min-h-screen bg-[#F8F9FA]">
         <div className="mx-auto flex min-h-screen items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
-          <LoadingSpinner message="Loading families…" />
+          <LoadingSpinner message="Loading groups…" />
         </div>
       </main>
     );
@@ -508,7 +508,7 @@ export default function Home({ session, authLoading }) {
         <section className="grid grid-cols-3 gap-3 py-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
             <p className="text-xs font-bold text-slate-600 uppercase">
-              Families
+              Groups
             </p>
             <p className="mt-2 text-2xl font-bold text-slate-950">
               {activeFamilies}
@@ -552,7 +552,7 @@ export default function Home({ session, authLoading }) {
             <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
               <div ref={searchContainerRef} className="relative w-full">
                 <label className="block w-full">
-                  <span className="sr-only">Search families</span>
+                  <span className="sr-only">Search groups</span>
                   <input
                     value={searchTerm}
                     onChange={(event) => {
@@ -566,7 +566,7 @@ export default function Home({ session, authLoading }) {
                         handleSearch();
                       }
                     }}
-                    placeholder="Search families, services, or hosts"
+                    placeholder="Search groups, services, or hosts"
                     className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                   />
                 </label>
@@ -629,7 +629,7 @@ export default function Home({ session, authLoading }) {
                   : "border border-slate-200 bg-white text-slate-700"
               }`}
             >
-              Available Families
+              Available Groups
             </button>
             <button
               type="button"
@@ -640,7 +640,7 @@ export default function Home({ session, authLoading }) {
                   : "border border-slate-200 bg-white text-slate-700"
               }`}
             >
-              Existing Families
+              Existing Groups
             </button>
           </div>
 
@@ -846,14 +846,14 @@ export default function Home({ session, authLoading }) {
                 <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
                   {familyView === "available" ? (
                     <>
-                      No new families found. Click{" "}
+                      No new groups found. Click{" "}
                       <Link to="/host" className="font-semibold text-saddle-700 hover:underline">
                         Host
                       </Link>{" "}
                       to create your own.
                     </>
                   ) : (
-                    "No families found."
+                    "No groups found."
                   )}
                 </div>
               ) : (
@@ -915,8 +915,9 @@ export default function Home({ session, authLoading }) {
                   payment details.
                 </li>
                 <li>
-                  Joining and hosting are free — the subscription cost itself
-                  is paid by M-Pesa directly to the host.
+                  ShareIt's platform fee (from KSh 20) is separate from the
+                  subscription cost itself, which is paid by M-Pesa directly
+                  to the host.
                 </li>
                 <li>
                   ShareIt does not manage refunds, account bans, or disputes

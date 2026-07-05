@@ -4,14 +4,14 @@ import SeoHead from "../components/SeoHead";
 const emailAddress = "keninnofficial@gmail.com";
 const emailSubject = "ShareIt issue report";
 const emailBody =
-  "Hello ShareIt team,%0D%0A%0D%0AI would like to report an issue with a family listing or subscription share. Details:%0D%0A%0D%0AService:%0D%0AHost name:%0D%0AIssue:%0D%0A%0D%0ABest regards,%0D%0A";
+  "Hello ShareIt team,%0D%0A%0D%0AI would like to report an issue with a group listing or subscription share. Details:%0D%0A%0D%0AService:%0D%0AHost name:%0D%0AIssue:%0D%0A%0D%0ABest regards,%0D%0A";
 
 export default function Report() {
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
       <SeoHead
         title="Report an Issue"
-        description="Report a problem with a ShareIt family listing, missing group access, or a host issue. Our team responds daily."
+        description="Report a problem with a ShareIt group listing, missing group access, or a host issue. Our team responds daily."
         path="/report"
       />
       <div className="mx-auto max-w-3xl space-y-8">
@@ -20,7 +20,7 @@ export default function Report() {
             Report a problem
           </p>
           <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-            Need help with a family listing?
+            Need help with a group listing?
           </h1>
           <p className="mt-4 text-slate-600">
             If you experienced a listing issue, missing group access, or a
@@ -55,7 +55,7 @@ export default function Report() {
                 <p className="font-semibold text-slate-900">Email message</p>
                 <pre className="mt-2 rounded-2xl bg-slate-100 p-4 text-xs leading-6 text-slate-700 whitespace-pre-wrap">
                   Hello ShareIt team, I would like to report an issue with a
-                  subscription family. Service: Canva Pro Host: James N. Issue:
+                  subscription group. Service: Canva Pro Host: James N. Issue:
                   I have not received the WhatsApp group link after paying. Best
                   regards,
                 </pre>
@@ -74,7 +74,7 @@ export default function Report() {
           <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
             <p className="font-semibold">Member reporting only</p>
             <p className="mt-2">
-              Only members of a full family may use this report email. Please
+              Only members of a full group may use this report email. Please
               include your service name, host name, and a short description of
               the issue.
             </p>
@@ -91,7 +91,7 @@ export default function Report() {
               to="/host"
               className="rounded-full border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-900 transition hover:bg-slate-50"
             >
-              Host a family
+              Host a group
             </Link>
           </div>
         </div>

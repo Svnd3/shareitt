@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendViaResend } from "../_shared/resend.ts";
+
+const ADMIN_EMAIL = "keninnofficial@gmail.com";
 
 // Sent from shareitt.xyz, verified in Resend (resend.com/domains).
 
@@ -19,7 +22,7 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
-function buildEmail(type: string, payload: Record<string, unknown>) {
+async function buildEmail(type: string, payload: Record<string, unknown>) {
   if (!payload || typeof payload !== "object") {
     throw new Error("Missing email payload.");
   }
@@ -104,7 +107,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         from: "ShareIt <no-reply@shareitt.xyz>",
         // Fixed recipient, not caller-supplied — this is an internal
         // notification, so the destination isn't taken from payload.to.
-        to: "keninnofficial@gmail.com",
+        to: ADMIN_EMAIL,
         subject: "ShareIt login report",
         html: `
           <p>A user just signed in to ShareIt.</p>
@@ -124,7 +127,7 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
         from: "ShareIt <no-reply@shareitt.xyz>",
         // Fixed recipient, not caller-supplied — this is an internal
         // notification, so the destination isn't taken from payload.to.
-        to: "keninnofficial@gmail.com",
+        to: ADMIN_EMAIL,
         subject: "New ShareIt sign-up",
         html: `
           <p>A new user just signed up on ShareIt.</p>
@@ -135,6 +138,94 @@ function buildEmail(type: string, payload: Record<string, unknown>) {
             <li>Method: ${String(method || "Not provided")}</li>
             <li>Signed up at: ${String(signed_up_at || new Date().toISOString())}</li>
           </ul>
+        `,
+      };
+    }
+    case "admin_new_family": {
+      const {
+        host_name,
+        service_name,
+        total_slots,
+        price_per_slot,
+        whatsapp_group_link,
+      } = payload as Record<string, unknown>;
+
+      if (!service_name || !host_name) {
+        throw new Error("Missing new family fields.");
+      }
+
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        to: ADMIN_EMAIL,
+        subject: `New group listed: ${String(service_name)}`,
+        html: `
+          <p>A new group listing was just created on ShareIt.</p>
+          <ul>
+            <li>Host: ${String(host_name)}</li>
+            <li>Service: ${String(service_name)}</li>
+            <li>Total slots: ${String(total_slots ?? "N/A")}</li>
+            <li>Price per slot: KSh ${String(price_per_slot ?? "N/A")}</li>
+            <li>WhatsApp link: ${whatsapp_group_link ? String(whatsapp_group_link) : "Not provided"}</li>
+          </ul>
+        `,
+      };
+    }
+    case "admin_new_member": {
+      const { member_name, service_name, host_name } = payload as Record<
+        string,
+        unknown
+      >;
+      if (!member_name || !service_name) {
+        throw new Error("Missing new member fields.");
+      }
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        to: ADMIN_EMAIL,
+        subject: `New join request: ${String(service_name)}`,
+        html: `
+          <p>A new member just requested to join a group on ShareIt.</p>
+          <ul>
+            <li>Member: ${String(member_name)}</li>
+            <li>Service: ${String(service_name)}</li>
+            <li>Host: ${String(host_name ?? "N/A")}</li>
+          </ul>
+        `,
+      };
+    }
+    case "host_new_member": {
+      const { family_id, member_name } = payload as Record<string, unknown>;
+      if (!family_id || !member_name) {
+        throw new Error("Missing host notification fields.");
+      }
+
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!supabaseUrl || !serviceRoleKey) {
+        throw new Error("Server is not configured to look up the host.");
+      }
+
+      // host_email has no anon/authenticated column grant (see Join.jsx), so
+      // it's looked up here with the service role key instead of ever being
+      // sent to the browser.
+      const adminClient = createClient(supabaseUrl, serviceRoleKey);
+      const { data: family, error: lookupError } = await adminClient
+        .from("families")
+        .select("host_email, host_name, service_name")
+        .eq("id", family_id as string)
+        .single();
+
+      if (lookupError || !family?.host_email) {
+        throw new Error("Could not find a host email for this group.");
+      }
+
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        to: family.host_email,
+        subject: `${String(member_name)} wants to join your ${String(family.service_name)} group`,
+        html: `
+          <p>Hi ${String(family.host_name)},</p>
+          <p><strong>${String(member_name)}</strong> just requested to join your <strong>${String(family.service_name)}</strong> group on ShareIt.</p>
+          <p>Check your Host dashboard for their contact details.</p>
         `,
       };
     }
@@ -199,7 +290,7 @@ serve(async (req) => {
 
   let emailPayload;
   try {
-    emailPayload = buildEmail(type, payload ?? {});
+    emailPayload = await buildEmail(type, payload ?? {});
   } catch (error) {
     return jsonResponse(
       {

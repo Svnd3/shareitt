@@ -97,6 +97,27 @@ alter table families add column if not exists host_email text;
 -- method (paid to ShareIt's number before the listing is created).
 alter table families add column if not exists host_payment_mpesa_code text;
 
+-- MIGRATION: run this once against an existing database to add the tiered,
+-- capacity-based paywall (Join Pass / Host Starter / Combo / Power Host /
+-- Unlimited). Unlike `payments`/`escrow_payments` above, rows here are only
+-- ever written by the verify-payment edge function after Paystack itself
+-- confirms the transaction server-side — see supabase_rls_policies.sql for
+-- why there is no client insert policy on this table.
+create table payment_grants (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) not null,
+  tier text not null check (tier in ('join', 'host', 'combo', 'power', 'unlimited')),
+  amount integer not null,
+  paystack_reference text not null unique,
+  host_slots_total integer not null default 0,
+  host_slots_used integer not null default 0,
+  join_slots_total integer not null default 0,
+  join_slots_used integer not null default 0,
+  is_unlimited boolean not null default false,
+  expires_at timestamp,
+  created_at timestamp default now()
+);
+
 -- ─────────────────────────────────────────────────────────────────────────
 -- Automatic emails setup (one-time, manual dashboard steps)
 --

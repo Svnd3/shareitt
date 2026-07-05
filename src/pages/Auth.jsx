@@ -1422,7 +1422,7 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
           </Link>
           <span className="text-slate-300">·</span>
           <Link to="/host" className="hover:text-slate-800">
-            Host a family
+            Host a group
           </Link>
         </div>
       </div>

@@ -192,3 +192,68 @@ begin
 exception when others then
   raise notice 'pg_cron not available — relying on client-triggered auto_verify_families() calls instead.';
 end $$;
+
+-- ── payment_grants ──────────────────────────────────────────────────────
+-- Unlike `payments`/`escrow_payments` above, there is deliberately NO insert
+-- (or update) policy here for authenticated users. A grant is only ever
+-- created by the verify-payment edge function using the service-role key,
+-- after it has independently verified the transaction with Paystack's
+-- server-side API — a client can never insert a fabricated "paid" row.
+alter table payment_grants enable row level security;
+
+drop policy if exists "payment_grants_select_own" on payment_grants;
+create policy "payment_grants_select_own"
+  on payment_grants for select
+  to authenticated
+  using (user_id = auth.uid());
+
+-- ── Atomic capacity consumption ─────────────────────────────────────────
+-- Mirrors increment_family_slot above: the one narrow, safe way for a user
+-- to spend one unit of their own host/join capacity. An active unlimited
+-- grant is preferred first (nothing to decrement); otherwise the oldest
+-- grant with remaining capacity is used. Raises if none is available, so
+-- the caller (Host.jsx/Join.jsx) knows to show the paywall instead.
+create or replace function public.consume_capacity(p_type text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_id uuid;
+begin
+  if p_type not in ('host', 'join') then
+    raise exception 'Invalid capacity type: %', p_type;
+  end if;
+
+  if exists (
+    select 1 from payment_grants
+    where user_id = auth.uid() and is_unlimited and expires_at > now()
+  ) then
+    return;
+  end if;
+
+  select id into target_id
+  from payment_grants
+  where user_id = auth.uid()
+    and (
+      (p_type = 'host' and host_slots_used < host_slots_total) or
+      (p_type = 'join' and join_slots_used < join_slots_total)
+    )
+  order by created_at asc
+  limit 1;
+
+  if target_id is null then
+    raise exception 'No available capacity for %', p_type;
+  end if;
+
+  if p_type = 'host' then
+    update payment_grants set host_slots_used = host_slots_used + 1 where id = target_id;
+  else
+    update payment_grants set join_slots_used = join_slots_used + 1 where id = target_id;
+  end if;
+end;
+$$;
+
+revoke all on function public.consume_capacity(text) from public;
+grant execute on function public.consume_capacity(text) to authenticated;

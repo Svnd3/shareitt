@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 const SITE_URL = "https://shareit.co.ke";
-const DEFAULT_TITLE = "ShareIt | Subscription families for Kenya";
+const DEFAULT_TITLE = "ShareIt | Subscription groups for Kenya";
 const DEFAULT_DESCRIPTION =
   "Join or host shared subscription plans for Spotify, Netflix, YouTube Premium and more. Split costs with trusted members across Kenya and save monthly.";
 

@@ -6,7 +6,7 @@ export default function FAQ() {
   const faqs = [
     {
       q: "Is joining or hosting free?",
-      a: "Yes. ShareIt does not charge any fee to join a family or to host one — both are completely free. The only money that changes hands is the subscription cost itself, which members pay directly to their host over M-Pesa, outside of ShareIt.",
+      a: "ShareIt charges a small one-time platform fee (from KSh 20) when you host or join a group, covering server costs, host/member verification, and support — plans range from single-use passes to a KSh 200 unlimited yearly plan. This is separate from the subscription cost itself, which members pay directly to their host over M-Pesa, outside of ShareIt.",
     },
     {
       q: "Is my payment safe?",
@@ -22,11 +22,11 @@ export default function FAQ() {
     },
     {
       q: "What is ShareIt?",
-      a: "ShareIt is a subscription-sharing marketplace that connects families and individuals looking to share subscription costs for services like Spotify, Netflix, ChatGPT, and more across Kenya.",
+      a: "ShareIt is a subscription-sharing marketplace that connects groups and individuals looking to share subscription costs for services like Spotify, Netflix, ChatGPT, and more across Kenya.",
     },
     {
       q: "Can I host my own subscription?",
-      a: 'Yes, and it\'s free! Head to "Host a Family" and fill in your service details, price, and total slots. You\'ll receive join requests via WhatsApp.',
+      a: 'Yes! Head to "Host a Group" and fill in your service details, price, and total slots. You\'ll pick a small platform plan to activate hosting, then receive join requests via WhatsApp.',
     },
     {
       q: "What if a member misses a payment?",
@@ -37,8 +37,8 @@ export default function FAQ() {
       a: "Monthly recharge timing is usually decided by the host or service plan. If you need more time, ask the host first and agree on a new payment date before the due date. Delaying without notice can affect the whole group, so clear communication helps everyone stay on track and keeps the plan working smoothly.",
     },
     {
-      q: "How do I join a family?",
-      a: '1. Browse available families. 2. Click "Join Family" and enter your name, phone, email, and two social media contacts. 3. Get added to the host\'s WhatsApp group — no fee required.',
+      q: "How do I join a group?",
+      a: '1. Browse available groups. 2. Click "Join Group" and enter your name, phone, email, and two social media contacts. 3. Pick a platform plan (from KSh 20) to confirm your spot. 4. Get added to the host\'s WhatsApp group.',
     },
   ];
 

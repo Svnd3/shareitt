@@ -145,7 +145,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          aria-label={`View ${family.service_name} family details`}
+          aria-label={`View ${family.service_name} group details`}
           className="group relative flex aspect-square w-full items-center justify-center rounded-3xl border border-slate-200 bg-white p-3 text-2xl shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:p-4"
         >
           {logo}
@@ -231,7 +231,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
                     {uniqueName}
                   </span>
                 ) : (
-                  <span className="text-slate-500">No family name set</span>
+                  <span className="text-slate-500">No group name set</span>
                 )}
               </div>
 
@@ -272,7 +272,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
                           }
                         }}
                         className="rounded-md border border-slate-200 px-3 py-1 text-sm"
-                        placeholder="Enter unique family name (optional)"
+                        placeholder="Enter unique group name (optional)"
                       />
                       <button
                         onClick={() => {
@@ -294,7 +294,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
                       onClick={() => setEditingUnique(true)}
                       className="text-sm text-slate-600 underline"
                     >
-                      {uniqueName ? "Edit family name" : "Set family name"}
+                      {uniqueName ? "Edit group name" : "Set group name"}
                     </button>
                   )}
                 </div>
@@ -344,7 +344,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
                 </p>
               ) : (
                 <p className="text-slate-600 font-medium">
-                  🔔 This family is full — join the waitlist and we'll notify
+                  🔔 This group is full — join the waitlist and we'll notify
                   you when a slot opens.
                 </p>
               )}
@@ -355,7 +355,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
               {slotsLeft <= 0 ? (
                 <>
                   <span className="inline-flex items-center justify-center rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500">
-                    Family full
+                    Group full
                   </span>
                   <Link
                     to="/host"
@@ -377,7 +377,7 @@ export default function ServiceCard({ family, userId, isMember = false }) {
                   to={`/join/${family.id}`}
                   className="inline-flex items-center justify-center rounded-full bg-[#1A7A3C] px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
                 >
-                  Join Family
+                  Join Group
                 </Link>
               )}
               {isMember && (
