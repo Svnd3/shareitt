@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, supabaseUrl, supabaseAnonKey } from "../lib/supabaseClient";
 import { sendMembershipRequestEmail } from "../lib/sendEmail";
 import SeoHead from "../components/SeoHead";
 import { defaultFamilies } from "../data/defaultFamilies";
@@ -15,6 +15,7 @@ export default function Join() {
   const location = useLocation();
   const navigate = useNavigate();
   const [family, setFamily] = useState(null);
+  const [familyLoading, setFamilyLoading] = useState(true);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -28,25 +29,63 @@ export default function Join() {
   const toast = useToast();
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadFamily = async () => {
-      if (!familyId) return;
-
-      const { data, error } = await supabase
-        .from("families")
-        .select("*")
-        .eq("id", familyId)
-        .single();
-
-      if (error || !data) {
-        const fallback = defaultFamilies.find((item) => item.id === familyId);
-        setFamily(fallback || null);
+      if (!familyId) {
+        setFamilyLoading(false);
         return;
       }
 
-      setFamily(data);
+      try {
+        // Bypass the supabase-js client for this read, same as Home.jsx:
+        // "families" is publicly readable under RLS, but the anon/authenticated
+        // roles only have column-level SELECT grants on a subset of columns
+        // (host_email and host_payment_mpesa_code are excluded). select("*")
+        // requires privilege on every column, so it gets a blanket 401 and
+        // silently turned every real family into "Family not found" here —
+        // list only the columns this page actually needs.
+        const params = new URLSearchParams({
+          select:
+            "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,hosting_method,created_by,created_at",
+          id: `eq.${familyId}`,
+        });
+        const response = await fetch(
+          `${supabaseUrl}/rest/v1/families?${params.toString()}`,
+          {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+            },
+            signal: AbortSignal.timeout(15000),
+          },
+        );
+
+        if (cancelled) return;
+
+        if (!response.ok) throw new Error(`status ${response.status}`);
+
+        const data = await response.json();
+        if (data?.[0]) {
+          setFamily(data[0]);
+        } else {
+          const fallback = defaultFamilies.find((item) => item.id === familyId);
+          setFamily(fallback || null);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Join fetch family exception:", error);
+        const fallback = defaultFamilies.find((item) => item.id === familyId);
+        setFamily(fallback || null);
+      } finally {
+        if (!cancelled) setFamilyLoading(false);
+      }
     };
 
     loadFamily();
+    return () => {
+      cancelled = true;
+    };
   }, [familyId]);
 
   useEffect(() => {
@@ -254,6 +293,16 @@ export default function Join() {
               Sign in / Sign up
             </Link>
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (familyLoading) {
+    return (
+      <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
+        <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm text-center">
+          <LoadingSpinner message="Loading family details…" />
         </div>
       </main>
     );
