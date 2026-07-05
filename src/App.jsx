@@ -8,6 +8,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { supabase } from "./lib/supabaseClient";
+import { friendlyAuthError } from "./lib/authErrors";
 import {
   sendAdminLoginReportEmail,
   sendAdminNewSignupEmail,
@@ -39,28 +40,6 @@ function withTimeout(promise, ms, timeoutMessage) {
       },
     );
   });
-}
-
-// Supabase/GoTrue error messages are written for developers, not end users
-// (e.g. raw PKCE/SSR internals like "use @supabase/ssr on both the server
-// and client..."). Translate the ones we can recognize into plain language
-// and fall back to a generic message for anything else, rather than ever
-// showing internal implementation detail to a visitor.
-function friendlyAuthError(message) {
-  if (!message) return "Sign-in didn't complete. Please try again.";
-  const lower = message.toLowerCase();
-  if (lower.includes("timed out")) return message;
-  if (lower.includes("code verifier") || lower.includes("pkce")) {
-    return "This link only works in the same browser you used to sign up or request it. Please open the email and click the link there, or sign in below if your email is already confirmed.";
-  }
-  if (
-    lower.includes("expired") ||
-    lower.includes("already used") ||
-    lower.includes("invalid flow state")
-  ) {
-    return "This link has expired or was already used. Please request a new one.";
-  }
-  return "Sign-in didn't complete. Please try again.";
 }
 
 function ProtectedRoute({ children, authLoading, session }) {
@@ -306,6 +285,7 @@ function AppRoutes() {
             state: {
               authError: friendlyAuthError(
                 oauthErrorDescription || exchangeFailedMessage,
+                { fallback: "Sign-in didn't complete. Please try again." },
               ),
             },
           });
@@ -319,7 +299,9 @@ function AppRoutes() {
           navigate("/auth", {
             replace: true,
             state: {
-              authError: friendlyAuthError(err?.message),
+              authError: friendlyAuthError(err?.message, {
+                fallback: "Sign-in didn't complete. Please try again.",
+              }),
             },
           });
         }

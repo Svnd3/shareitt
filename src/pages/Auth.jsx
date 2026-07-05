@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { sendWelcomeEmail } from "../lib/sendEmail";
+import { friendlyAuthError } from "../lib/authErrors";
 import SeoHead from "../components/SeoHead";
 
 // Feature flags — flip these on once the corresponding provider is configured
@@ -1012,7 +1013,7 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
     setOauthLoading("");
     resetCaptcha();
     if (error) {
-      setError(error.message);
+      setError(friendlyAuthError(error.message));
       return;
     }
     if (data?.url) window.location.href = data.url;
@@ -1052,7 +1053,7 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
       const { error: e } = await supabase.auth.updateUser({ password });
       setLoading(false);
       if (e) {
-        setError(e.message);
+        setError(friendlyAuthError(e.message));
         return;
       }
       setSuccessMessage("Password updated! Redirecting…");
@@ -1088,7 +1089,7 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
       setLoading(false);
       resetCaptcha();
       if (e) {
-        setError(e.message);
+        setError(friendlyAuthError(e.message));
         return;
       }
       setSuccessMessage(
@@ -1167,7 +1168,7 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
           return;
         }
       }
-      setError(result.error.message);
+      setError(friendlyAuthError(result.error.message));
       return;
     }
 
