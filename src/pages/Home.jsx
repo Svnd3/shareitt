@@ -17,6 +17,7 @@ import ChatGPTImg from "../assets/chatgpt.webp";
 import PrimeImg from "../assets/prime.webp";
 import SummertidesImg from "../assets/summertides.webp";
 import { SkeletonGrid } from "../components/SkeletonCard";
+import { defaultFamilies } from "../data/defaultFamilies";
 
 const filters = [
   "All",
@@ -350,11 +351,10 @@ export default function Home({ session, authLoading }) {
     slotFilter,
   ]);
 
-  const activeFamilies = families.length;
-  const membersSaved = families.reduce(
-    (sum, family) => sum + family.filled_slots,
-    0,
-  );
+  const activeFamilies = families.length + defaultFamilies.length;
+  const membersSaved =
+    families.reduce((sum, family) => sum + family.filled_slots, 0) +
+    defaultFamilies.reduce((sum, family) => sum + family.filled_slots, 0);
 
   if (loading) {
     return (
