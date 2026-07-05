@@ -320,8 +320,17 @@ function AppRoutes() {
       async (event, newSession) => {
         if (!mounted) return;
 
-        // Ignore events that fire before init() completes — init handles first load
-        if (!initDone.current && event === "TOKEN_REFRESHED") return;
+        // Ignore events that fire before init() completes — init handles
+        // first load itself (including setting lastReportedUserId). Without
+        // this, supabase-js's own session-recovery SIGNED_IN event — fired
+        // on every page refresh, before init() has set lastReportedUserId —
+        // looks like a brand-new login and sends a login-report email on
+        // every refresh.
+        if (
+          !initDone.current &&
+          (event === "TOKEN_REFRESHED" || event === "SIGNED_IN")
+        )
+          return;
 
         setSession(newSession);
 
