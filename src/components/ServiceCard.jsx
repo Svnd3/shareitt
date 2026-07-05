@@ -2,8 +2,12 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import SummertidesLogo from "../assets/summertideslogo.webp";
+import DstvStreamLogo from "../assets/dstvstreamlogo.webp";
 
-const CUSTOM_LOGOS = [["summertides", SummertidesLogo]];
+const CUSTOM_LOGOS = [
+  ["summertides", SummertidesLogo],
+  ["dstv", DstvStreamLogo],
+];
 
 const getCustomLogo = (serviceName) => {
   const lowerName = serviceName?.toLowerCase() ?? "";
@@ -19,7 +23,6 @@ const BRAND_KEYWORDS = [
   ["amazon", "amazon.com"],
   ["disney", "disneyplus.com"],
   ["showmax", "showmax.com"],
-  ["dstv", "dstv.com"],
   ["apple", "apple.com"],
   ["chatgpt", "openai.com"],
   ["openai", "openai.com"],
