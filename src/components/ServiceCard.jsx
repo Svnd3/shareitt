@@ -2,11 +2,11 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import SummertidesLogo from "../assets/summertideslogo.webp";
-import DstvStreamLogo from "../assets/dstvstreamlogo.webp";
+import DstvLogo from "../assets/dstvlogo.svg";
 
 const CUSTOM_LOGOS = [
   ["summertides", SummertidesLogo],
-  ["dstv", DstvStreamLogo],
+  ["dstv", DstvLogo],
 ];
 
 const getCustomLogo = (serviceName) => {
