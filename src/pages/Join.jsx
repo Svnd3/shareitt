@@ -5,6 +5,8 @@ import {
   sendMembershipRequestEmail,
   sendHostNewMemberEmail,
   sendAdminNewMemberEmail,
+  sendAdminFamilyFullEmail,
+  sendHostFamilyFullEmail,
 } from "../lib/sendEmail";
 import SeoHead from "../components/SeoHead";
 import { defaultFamilies } from "../data/defaultFamilies";
@@ -308,6 +310,16 @@ export default function Join() {
       console.error("Admin new member email failed:", error);
     });
 
+    if (family.filled_slots + 1 >= family.total_slots) {
+      sendAdminFamilyFullEmail({ family }).catch((error) => {
+        console.error("Admin family full email failed:", error);
+      });
+
+      sendHostFamilyFullEmail({ familyId: family.id }).catch((error) => {
+        console.error("Host family full email failed:", error);
+      });
+    }
+
     if (PAYMENTS_ENABLED) {
       try {
         await consumeCapacity("join");
@@ -551,7 +563,8 @@ export default function Join() {
                     />
                   </label>
                   <label className="space-y-2 text-sm text-slate-700">
-                    Phone Number
+                    Phone Number{" "}
+                    <span className="text-saddle-600">(required)</span>
                     <input
                       value={phone}
                       onChange={(event) => setPhone(event.target.value)}
@@ -559,12 +572,15 @@ export default function Join() {
                         const cleaned = phone.trim();
                         const valid = /^(\+254|254|0)[17]\d{8}$/.test(cleaned);
                         setPhoneError(
-                          cleaned && !valid
-                            ? "Enter a valid Kenyan number e.g. 0712345678 or 0112345678"
-                            : "",
+                          !cleaned
+                            ? "Phone number is required"
+                            : !valid
+                              ? "Enter a valid Kenyan number e.g. 0712345678 or 0112345678"
+                              : "",
                         );
                       }}
                       type="tel"
+                      required
                       placeholder="0712345678 or 0112345678"
                       className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                     />

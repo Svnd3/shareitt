@@ -1000,18 +1000,13 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
   // ── OAuth (Google / Apple / Facebook) ──
   const handleOAuth = async (provider) => {
     clear();
-    if (!captchaToken && !hcaptchaLoadFailed) {
-      setError("Please complete the verification challenge.");
-      return;
-    }
     setOauthLoading(provider);
     const dest = redirectTo.startsWith("/") ? redirectTo : `/${redirectTo}`;
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${appUrl}${dest}`, captchaToken },
+      options: { redirectTo: `${appUrl}${dest}` },
     });
     setOauthLoading("");
-    resetCaptcha();
     if (error) {
       setError(friendlyAuthError(error.message));
       return;
@@ -1074,7 +1069,7 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
       setError("Please enter a valid email address.");
       return;
     }
-    if (!captchaToken && !hcaptchaLoadFailed) {
+    if (mode !== "signUp" && !captchaToken && !hcaptchaLoadFailed) {
       setError("Please complete the verification challenge.");
       return;
     }
@@ -1152,7 +1147,7 @@ export default function Auth({ recoveryMode = false, onRecoveryComplete }) {
         : await supabase.auth.signUp({
             email: normalizedEmail,
             password,
-            options: { data: { full_name: fullName.trim() }, captchaToken },
+            options: { data: { full_name: fullName.trim() } },
           });
     setLoading(false);
     resetCaptcha();

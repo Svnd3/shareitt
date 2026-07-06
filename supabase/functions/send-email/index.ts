@@ -198,6 +198,72 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
         `,
       };
     }
+    case "admin_family_full": {
+      const { service_name, host_name, total_slots } = payload as Record<
+        string,
+        unknown
+      >;
+      if (!service_name) {
+        throw new Error("Missing family full fields.");
+      }
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        to: "keninnofficial@gmail.com",
+        subject: `${String(service_name)} family is now full`,
+        html: `
+          <p>A family just filled all of its slots on ShareIt.</p>
+          <ul>
+            <li>Service: ${String(service_name)}</li>
+            <li>Host: ${String(host_name ?? "N/A")}</li>
+            <li>Total slots: ${String(total_slots ?? "N/A")}</li>
+          </ul>
+        `,
+      };
+    }
+    case "host_family_full": {
+      const { family_id } = payload as Record<string, unknown>;
+      if (!family_id) {
+        throw new Error("Missing host family full fields.");
+      }
+
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!supabaseUrl || !serviceRoleKey) {
+        throw new Error("Server is not configured to look up the host.");
+      }
+
+      // host_email has no anon/authenticated column grant (see Join.jsx), so
+      // it's looked up here with the service role key instead of ever being
+      // sent to the browser.
+      const adminClient = createClient(supabaseUrl, serviceRoleKey);
+      const { data: family, error: lookupError } = await adminClient
+        .from("families")
+        .select("host_email, host_name, service_name, total_slots")
+        .eq("id", family_id as string)
+        .single();
+
+      if (lookupError || !family?.host_email) {
+        throw new Error("Could not find a host email for this group.");
+      }
+
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        to: family.host_email,
+        subject: `Great news — your ${String(family.service_name)} group is full!`,
+        html: `
+          <p>Hi ${String(family.host_name)},</p>
+          <p>Your <strong>${String(family.service_name)}</strong> family just filled its last slot — all ${String(family.total_slots)} spots are taken. Thank you for hosting with ShareIt!</p>
+          <p>Here's what to keep in mind now that you're full:</p>
+          <ul>
+            <li>New join requests for this group will be turned away automatically until a slot opens up.</li>
+            <li>You can manage members, remove inactive ones, and free up slots any time from your Host dashboard.</li>
+            <li>Keep an eye on renewals — reminding members ahead of the billing date helps avoid awkward gaps.</li>
+          </ul>
+          <p>Since this group filled up, there's clearly demand for it. Consider hosting another ${String(family.service_name)} family (or a different service) — it's free to list, and it's a great way to help more people save while earning more for yourself.</p>
+          <p>Thanks again for being a great host on ShareIt.</p>
+        `,
+      };
+    }
     case "member_removed": {
       const { to, member_name, service_name, host_name } = payload as Record<
         string,

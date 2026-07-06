@@ -113,6 +113,20 @@ export async function sendHostNewMemberEmail({ familyId, memberName }) {
   });
 }
 
+export async function sendAdminFamilyFullEmail({ family }) {
+  await invokeEmailFunction("admin_family_full", {
+    service_name: family.service_name,
+    host_name: family.host_name,
+    total_slots: family.total_slots,
+  });
+}
+
+export async function sendHostFamilyFullEmail({ familyId }) {
+  await invokeEmailFunction("host_family_full", {
+    family_id: familyId,
+  });
+}
+
 export async function sendMemberRemovedEmail({
   email,
   memberName,
