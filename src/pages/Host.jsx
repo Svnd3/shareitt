@@ -56,6 +56,11 @@ export default function Host() {
     unlimitedActive: false,
   });
   const [showPaywall, setShowPaywall] = useState(false);
+  const [editingFamilyId, setEditingFamilyId] = useState(null);
+  const [editServiceName, setEditServiceName] = useState("");
+  const [editPricePerSlot, setEditPricePerSlot] = useState("");
+  const [editTotalSlots, setEditTotalSlots] = useState("");
+  const [editWhatsappLink, setEditWhatsappLink] = useState("");
   const toast = useToast();
 
   const refreshCapacity = async (userId) => {
@@ -355,6 +360,67 @@ export default function Host() {
         ? "Group removed from live listings."
         : "Group is now live!",
     );
+    setLoading(false);
+  };
+
+  const handleStartEdit = (family) => {
+    setEditingFamilyId(family.id);
+    setEditServiceName(family.service_name || "");
+    setEditPricePerSlot(String(family.price_per_slot ?? ""));
+    setEditTotalSlots(String(family.total_slots ?? ""));
+    setEditWhatsappLink(family.whatsapp_group_link || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingFamilyId(null);
+  };
+
+  const handleSaveEdit = async (family) => {
+    if (
+      !editServiceName.trim() ||
+      !editPricePerSlot ||
+      !editTotalSlots ||
+      !editWhatsappLink.trim()
+    ) {
+      toast.showToast("Please complete all fields.", "error");
+      return;
+    }
+
+    const newTotalSlots = Number(editTotalSlots);
+    if (newTotalSlots < family.filled_slots) {
+      toast.showToast(
+        `Total slots can't be less than the ${family.filled_slots} member(s) already joined.`,
+        "error",
+      );
+      return;
+    }
+
+    setLoading(true);
+    setStatus("Saving changes...");
+
+    const { error } = await supabase
+      .from("families")
+      .update({
+        service_name: editServiceName.trim(),
+        price_per_slot: Number(editPricePerSlot),
+        total_slots: newTotalSlots,
+        whatsapp_group_link: editWhatsappLink.trim(),
+      })
+      .eq("id", family.id)
+      .eq("created_by", session?.user?.id);
+
+    if (error) {
+      console.error("Family update error:", error);
+      setStatus("Unable to save changes. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    setEditingFamilyId(null);
+    if (session?.user?.id) {
+      await refreshHostData(session.user.id);
+    }
+    setStatus("Group details updated.");
     setLoading(false);
   };
 
@@ -847,6 +913,18 @@ export default function Host() {
                       </button>
                       <button
                         type="button"
+                        onClick={() =>
+                          editingFamilyId === family.id
+                            ? handleCancelEdit()
+                            : handleStartEdit(family)
+                        }
+                        disabled={loading}
+                        className="rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        {editingFamilyId === family.id ? "Cancel" : "Edit"}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleDeleteFamily(family.id)}
                         disabled={loading}
                         className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
@@ -857,14 +935,89 @@ export default function Host() {
                   </div>
 
                   <div className="mt-6 space-y-4">
-                    <div className="rounded-3xl bg-white p-4 text-sm text-slate-700">
-                      <p className="font-semibold text-slate-900">
-                        WhatsApp link
-                      </p>
-                      <p className="mt-2 text-sm break-all">
-                        {family.whatsapp_group_link || "Not provided yet."}
-                      </p>
-                    </div>
+                    {editingFamilyId === family.id ? (
+                      <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
+                        <label className="block space-y-2 text-sm text-slate-700">
+                          Service Name
+                          <input
+                            value={editServiceName}
+                            onChange={(event) =>
+                              setEditServiceName(event.target.value)
+                            }
+                            type="text"
+                            className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                          />
+                        </label>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <label className="block space-y-2 text-sm text-slate-700">
+                            Price per Slot
+                            <input
+                              value={editPricePerSlot}
+                              onChange={(event) =>
+                                setEditPricePerSlot(event.target.value)
+                              }
+                              type="number"
+                              min="1"
+                              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                            />
+                          </label>
+                          <label className="block space-y-2 text-sm text-slate-700">
+                            Total Slots
+                            <input
+                              value={editTotalSlots}
+                              onChange={(event) =>
+                                setEditTotalSlots(event.target.value)
+                              }
+                              type="number"
+                              min={family.filled_slots || 1}
+                              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                            />
+                            <span className="block text-xs text-slate-500">
+                              Can't be less than the {family.filled_slots}{" "}
+                              member(s) already joined.
+                            </span>
+                          </label>
+                        </div>
+                        <label className="block space-y-2 text-sm text-slate-700">
+                          WhatsApp Group Link
+                          <input
+                            value={editWhatsappLink}
+                            onChange={(event) =>
+                              setEditWhatsappLink(event.target.value)
+                            }
+                            type="url"
+                            className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                          />
+                        </label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEdit(family)}
+                            disabled={loading}
+                            className="rounded-full bg-[#1A7A3C] px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50"
+                          >
+                            Save changes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            disabled={loading}
+                            className="rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-3xl bg-white p-4 text-sm text-slate-700">
+                        <p className="font-semibold text-slate-900">
+                          WhatsApp link
+                        </p>
+                        <p className="mt-2 text-sm break-all">
+                          {family.whatsapp_group_link || "Not provided yet."}
+                        </p>
+                      </div>
+                    )}
 
                     <div className="rounded-3xl bg-white p-4 text-sm text-slate-700">
                       <div className="flex items-center justify-between gap-3">
