@@ -1,7 +1,7 @@
 import { supabase, supabaseUrl, supabaseAnonKey } from "./supabaseClient";
 
 // Flip to true to re-enable the tiered payment paywall for hosting/joining.
-export const PAYMENTS_ENABLED = false;
+export const PAYMENTS_ENABLED = true;
 
 const VERIFY_PAYMENT_URL = `${supabaseUrl}/functions/v1/verify-payment`;
 
@@ -21,7 +21,7 @@ export const PRICING_TIERS = [
   {
     id: "host",
     name: "Host Starter",
-    amount: 25,
+    amount: 5,
     hostSlots: 1,
     joinSlots: 0,
     description: "Host 1 group",
@@ -49,7 +49,7 @@ export const PRICING_TIERS = [
     amount: 200,
     hostSlots: null,
     joinSlots: null,
-    description: "Host & join unlimited groups for 1 year",
+    description: "Host & join unlimited groups for 3 months",
     badge: "Best value",
   },
 ];

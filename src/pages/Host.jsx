@@ -13,6 +13,7 @@ import SocialHandleInput from "../components/SocialHandleInput";
 import { SERVICE_NAME_OPTIONS } from "../lib/services";
 import TierPaywall from "../components/TierPaywall";
 import { getUserCapacity, consumeCapacity, PAYMENTS_ENABLED } from "../lib/payments";
+import { buildGroupRulesMessage } from "../lib/groupRules";
 
 function LoadingOverlay({ message }) {
   return (
@@ -39,6 +40,8 @@ export default function Host() {
   const [hostSocial1, setHostSocial1] = useState("");
   const [socialFieldKey, setSocialFieldKey] = useState(0);
   const [groupNameCopied, setGroupNameCopied] = useState(false);
+  const [rulesCopied, setRulesCopied] = useState(false);
+  const [showRulesPreview, setShowRulesPreview] = useState(false);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState(null);
@@ -380,6 +383,22 @@ export default function Host() {
     }
   };
 
+  const groupRulesMessage = buildGroupRulesMessage({
+    serviceName,
+    hostName,
+  });
+
+  const handleCopyRules = async () => {
+    try {
+      await navigator.clipboard.writeText(groupRulesMessage);
+      setRulesCopied(true);
+      setTimeout(() => setRulesCopied(false), 2000);
+    } catch (error) {
+      console.error("Copy failed:", error);
+      setStatus("Unable to copy. Long-press the text to copy it manually.");
+    }
+  };
+
   const createFamilyListing = async () => {
     setLoading(true);
     setStatus("Saving your group listing...");
@@ -658,13 +677,12 @@ export default function Host() {
               </label>
             </div>
             <div className="space-y-3 rounded-3xl border border-saddle-200 bg-saddle-50 p-5 text-sm text-saddle-900">
-              <p className="font-semibold">Set up your WhatsApp group</p>
-              <p className="text-slate-700">
-                We've generated a name for your group below. Copy it, open
-                WhatsApp, create a new group and paste it in as the group
-                name. Once you've added members, copy the group's invite link
-                and paste it into the field below — anyone who opens it will
-                land in a group that's already named and ready to go.
+              <p className="font-semibold">
+                Set up your WhatsApp group
+                <Tooltip
+                  label="How?"
+                  content="Open the group chat, tap the group name at the top, then scroll down to Invite via link. Choose Copy link or Share link and send it to whoever you want to join. You need to be a group admin to share the link, unless the group's settings allow every member to do so."
+                />
               </p>
               {suggestedGroupName ? (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -694,6 +712,41 @@ export default function Host() {
                   Select a service above to generate a group name.
                 </p>
               )}
+
+              <div className="space-y-2 border-t border-saddle-200 pt-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold">Send group rules to members</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowRulesPreview((value) => !value)}
+                    className="text-xs font-semibold text-saddle-700 underline underline-offset-2"
+                  >
+                    {showRulesPreview ? "Hide preview" : "Preview"}
+                  </button>
+                </div>
+                {showRulesPreview && (
+                  <div className="whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-900">
+                    {groupRulesMessage}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyRules}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    {rulesCopied ? "Copied!" : "Copy rules"}
+                  </button>
+                  <a
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(groupRulesMessage)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full bg-[#1A7A3C] px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600"
+                  >
+                    Share in WhatsApp
+                  </a>
+                </div>
+              </div>
             </div>
 
             <label className="space-y-2 text-sm text-slate-700">
