@@ -21,7 +21,7 @@ export const PRICING_TIERS = [
   {
     id: "host",
     name: "Host Starter",
-    amount: 5,
+    amount: 20,
     hostSlots: 1,
     joinSlots: 0,
     description: "Host 1 group",
