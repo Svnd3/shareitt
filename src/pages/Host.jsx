@@ -15,6 +15,8 @@ import { SERVICE_PRESETS } from "../lib/servicePresets";
 import TierPaywall from "../components/TierPaywall";
 import { getUserCapacity, consumeCapacity, PAYMENTS_ENABLED } from "../lib/payments";
 import { buildGroupRulesMessage } from "../lib/groupRules";
+import { GROUP_DESCRIPTION_EXAMPLES } from "../lib/groupDescription";
+import { uploadServiceLogo } from "../lib/imageUpload";
 
 function LoadingOverlay({ message }) {
   return (
@@ -38,6 +40,9 @@ export default function Host() {
   const [pricePerSlot, setPricePerSlot] = useState("");
   const [totalSlots, setTotalSlots] = useState("");
   const [whatsappLink, setWhatsappLink] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [logoUploading, setLogoUploading] = useState(false);
   const [hostSocial1, setHostSocial1] = useState("");
   const [socialFieldKey, setSocialFieldKey] = useState(0);
   const [groupNameCopied, setGroupNameCopied] = useState(false);
@@ -62,6 +67,9 @@ export default function Host() {
   const [editPricePerSlot, setEditPricePerSlot] = useState("");
   const [editTotalSlots, setEditTotalSlots] = useState("");
   const [editWhatsappLink, setEditWhatsappLink] = useState("");
+  const [editGroupDescription, setEditGroupDescription] = useState("");
+  const [editLogoUrl, setEditLogoUrl] = useState("");
+  const [editLogoUploading, setEditLogoUploading] = useState(false);
   const toast = useToast();
 
   const refreshCapacity = async (userId) => {
@@ -74,7 +82,7 @@ export default function Host() {
     const { data: families, error: familiesError } = await supabase
       .from("families")
       .select(
-        "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,created_by,created_at",
+        "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,logo_url,unique_name,group_description,created_by,created_at",
       )
       .eq("created_by", userId)
       .order("created_at", { ascending: false });
@@ -108,7 +116,7 @@ export default function Host() {
     const { data: joinedData, error: joinedError } = await supabase
       .from("members")
       .select(
-        "family_id, families(id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,created_by,created_at)",
+        "family_id, families(id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,logo_url,created_by,created_at)",
       )
       .eq("user_id", userId);
 
@@ -364,6 +372,36 @@ export default function Host() {
     setLoading(false);
   };
 
+  const handleLogoFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !session?.user?.id) return;
+
+    setLogoUploading(true);
+    try {
+      setLogoUrl(await uploadServiceLogo(file, session.user.id));
+    } catch (error) {
+      toast.showToast(error.message || "Unable to upload that image.", "error");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handleEditLogoFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !session?.user?.id) return;
+
+    setEditLogoUploading(true);
+    try {
+      setEditLogoUrl(await uploadServiceLogo(file, session.user.id));
+    } catch (error) {
+      toast.showToast(error.message || "Unable to upload that image.", "error");
+    } finally {
+      setEditLogoUploading(false);
+    }
+  };
+
   const handleServiceNameChange = (value) => {
     setServiceName(value);
     const preset = SERVICE_PRESETS[value];
@@ -388,6 +426,8 @@ export default function Host() {
     setEditPricePerSlot(String(family.price_per_slot ?? ""));
     setEditTotalSlots(String(family.total_slots ?? ""));
     setEditWhatsappLink(family.whatsapp_group_link || "");
+    setEditLogoUrl(family.logo_url || "");
+    setEditGroupDescription(family.group_description || "");
   };
 
   const handleCancelEdit = () => {
@@ -424,6 +464,8 @@ export default function Host() {
         price_per_slot: Number(editPricePerSlot),
         total_slots: newTotalSlots,
         whatsapp_group_link: editWhatsappLink.trim(),
+        logo_url: editLogoUrl || null,
+        group_description: editGroupDescription.trim() || null,
       })
       .eq("id", family.id)
       .eq("created_by", session?.user?.id);
@@ -492,6 +534,8 @@ export default function Host() {
         hosting_method: "whatsapp",
         host_social_1: hostSocial1.trim(),
         host_email: session?.user?.email || null,
+        logo_url: logoUrl || null,
+        group_description: groupDescription.trim() || null,
         created_by: session?.user?.id,
       },
     ]);
@@ -513,7 +557,9 @@ export default function Host() {
     setPricePerSlot("");
     setTotalSlots("");
     setWhatsappLink("");
+    setGroupDescription("");
     setHostSocial1("");
+    setLogoUrl("");
     setSocialFieldKey((key) => key + 1);
 
     if (session?.user?.email) {
@@ -691,6 +737,28 @@ export default function Host() {
               </datalist>
             </label>
             <label className="space-y-2 text-sm text-slate-700">
+              Group photo (optional)
+              <div className="flex items-center gap-3">
+                {logoUrl && (
+                  <img
+                    src={logoUrl}
+                    alt="Group logo preview"
+                    className="h-12 w-12 rounded-2xl object-cover"
+                  />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoFileChange}
+                  disabled={logoUploading}
+                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition file:mr-3 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-xs file:font-semibold"
+                />
+              </div>
+              {logoUploading && (
+                <span className="text-xs text-slate-500">Uploading…</span>
+              )}
+            </label>
+            <label className="space-y-2 text-sm text-slate-700">
               Your Name
               <input
                 value={hostName}
@@ -836,6 +904,27 @@ export default function Host() {
                 className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
               />
             </label>
+            <label className="space-y-2 text-sm text-slate-700">
+              Group Description (optional){" "}
+              <Tooltip
+                label="Ideas?"
+                content={
+                  <ul className="list-disc space-y-1 pl-4">
+                    {GROUP_DESCRIPTION_EXAMPLES.map((example) => (
+                      <li key={example}>{example}</li>
+                    ))}
+                  </ul>
+                }
+              />
+              <textarea
+                value={groupDescription}
+                onChange={(event) => setGroupDescription(event.target.value)}
+                rows={2}
+                maxLength={200}
+                placeholder="A short line members see on the group card, e.g. how reliable you are or how payments work."
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              />
+            </label>
             <div className="rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">
               <p className="font-semibold">
                 ⚠ You are fully responsible for this group's money
@@ -967,6 +1056,28 @@ export default function Host() {
                             className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                           />
                         </label>
+                        <label className="block space-y-2 text-sm text-slate-700">
+                          Group photo (optional)
+                          <div className="flex items-center gap-3">
+                            {editLogoUrl && (
+                              <img
+                                src={editLogoUrl}
+                                alt="Group logo preview"
+                                className="h-12 w-12 rounded-2xl object-cover"
+                              />
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleEditLogoFileChange}
+                              disabled={editLogoUploading}
+                              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition file:mr-3 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-xs file:font-semibold"
+                            />
+                          </div>
+                          {editLogoUploading && (
+                            <span className="text-xs text-slate-500">Uploading…</span>
+                          )}
+                        </label>
                         <div className="grid gap-4 sm:grid-cols-2">
                           <label className="block space-y-2 text-sm text-slate-700">
                             Price per Slot
@@ -1005,6 +1116,18 @@ export default function Host() {
                               setEditWhatsappLink(event.target.value)
                             }
                             type="url"
+                            className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                          />
+                        </label>
+                        <label className="block space-y-2 text-sm text-slate-700">
+                          Group Description (optional)
+                          <textarea
+                            value={editGroupDescription}
+                            onChange={(event) =>
+                              setEditGroupDescription(event.target.value)
+                            }
+                            rows={2}
+                            maxLength={200}
                             className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                           />
                         </label>

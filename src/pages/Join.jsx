@@ -18,6 +18,7 @@ import SocialHandleInput from "../components/SocialHandleInput";
 import HowItWorks from "../components/HowItWorks";
 import TierPaywall from "../components/TierPaywall";
 import { getUserCapacity, consumeCapacity, PAYMENTS_ENABLED } from "../lib/payments";
+import { buildDefaultGroupDescription } from "../lib/groupDescription";
 
 export default function Join() {
   const { familyId } = useParams();
@@ -70,7 +71,7 @@ export default function Join() {
         // list only the columns this page actually needs.
         const params = new URLSearchParams({
           select:
-            "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,hosting_method,created_by,created_at",
+            "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,hosting_method,logo_url,group_description,created_by,created_at",
           id: `eq.${familyId}`,
         });
         const response = await fetch(
@@ -515,6 +516,9 @@ export default function Join() {
               <h1 className="mt-3 text-3xl font-semibold text-slate-950">
                 {family.service_name}
               </h1>
+              <p className="mt-2 text-sm text-slate-600">
+                {family.group_description || buildDefaultGroupDescription(family)}
+              </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <button

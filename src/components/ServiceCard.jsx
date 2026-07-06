@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { buildDefaultGroupDescription } from "../lib/groupDescription";
 import SummertidesLogo from "../assets/summertideslogo.webp";
 import DstvLogo from "../assets/dstvlogo.svg";
 
@@ -149,7 +150,13 @@ export default function ServiceCard({
     `Hello ShareIt team,%0D%0A%0D%0AI would like to report an issue with the full group for ${family.service_name} hosted by ${family.host_name}.%0D%0A%0D%0AIssue:%0D%0A%0D%0ABest regards,%0D%0A`,
   )}`;
 
-  const logo = customLogo ? (
+  const logo = family.logo_url ? (
+    <img
+      src={family.logo_url}
+      alt={`${family.service_name} logo`}
+      className="h-full w-full rounded-2xl object-cover"
+    />
+  ) : customLogo ? (
     <img
       src={customLogo}
       alt={`${family.service_name} logo`}
@@ -348,6 +355,9 @@ export default function ServiceCard({
                 <span className="font-medium text-slate-900">
                   {family.host_name}
                 </span>
+              </p>
+              <p className="text-sm text-slate-600">
+                {family.group_description || buildDefaultGroupDescription(family)}
               </p>
             </div>
 

@@ -290,6 +290,50 @@ $$;
 revoke all on function public.leave_family(uuid) from public;
 grant execute on function public.leave_family(uuid) to authenticated;
 
+-- ── Group photos (Supabase Storage) ─────────────────────────────────────
+-- Lets a host upload a photo for their listing instead of relying only on
+-- scraped favicons. Images are compressed/resized client-side before
+-- upload (see src/lib/imageUpload.js), so the free-tier 1GB storage cap
+-- goes a long way — this migration just needs the column and the bucket.
+alter table families add column if not exists logo_url text;
+
+insert into storage.buckets (id, name, public)
+values ('service-logos', 'service-logos', true)
+on conflict (id) do nothing;
+
+-- ── Group description ───────────────────────────────────────────────────
+-- Short host-written blurb shown on the group card. Listings created before
+-- this field existed (or left blank) fall back to an auto-generated
+-- description client-side (see src/lib/groupDescription.js) instead of
+-- being backfilled here.
+alter table families add column if not exists group_description text;
+
+-- Anyone can view a logo (the marketplace listing itself is public), but
+-- only the uploader can add/replace/remove their own file. Storage sets
+-- `owner` to auth.uid() automatically on upload via the client SDK.
+drop policy if exists "service_logos_public_read" on storage.objects;
+create policy "service_logos_public_read"
+  on storage.objects for select
+  using (bucket_id = 'service-logos');
+
+drop policy if exists "service_logos_insert_own" on storage.objects;
+create policy "service_logos_insert_own"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'service-logos');
+
+drop policy if exists "service_logos_update_own" on storage.objects;
+create policy "service_logos_update_own"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'service-logos' and owner = auth.uid());
+
+drop policy if exists "service_logos_delete_own" on storage.objects;
+create policy "service_logos_delete_own"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'service-logos' and owner = auth.uid());
+
 -- ── Realtime for live slot counts ────────────────────────────────────────
 -- Lets the browse page (Home.jsx) and the join page (Join.jsx) reflect
 -- filled_slots changes the instant another user joins, instead of only on
