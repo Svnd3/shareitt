@@ -107,6 +107,35 @@ export default function Join() {
     };
   }, [familyId]);
 
+  // Keep the slot count on this page live so a group that fills up while
+  // someone is filling out the form is reflected immediately, instead of
+  // only after they submit and hit the "already full" check server-side.
+  useEffect(() => {
+    if (!familyId || !supabase.channel) return;
+
+    const channel = supabase
+      .channel(`family-${familyId}-changes`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "families",
+          filter: `id=eq.${familyId}`,
+        },
+        (payload) => {
+          setFamily((current) =>
+            current ? { ...current, ...payload.new } : current,
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [familyId]);
+
   useEffect(() => {
     const loadSession = async () => {
       if (!supabase.auth?.getSession) {

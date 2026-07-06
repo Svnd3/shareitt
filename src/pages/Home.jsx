@@ -232,6 +232,44 @@ export default function Home({ session, authLoading }) {
     };
   }, []);
 
+  // Keep slot counts live: subscribe to Postgres changes on `families` so
+  // filled_slots (and new/removed listings) reflect other users joining
+  // without requiring a page refresh. Requires `families` to be added to
+  // the supabase_realtime publication (see supabase_rls_policies.sql).
+  useEffect(() => {
+    if (!hasSupabaseConfig || !supabase.channel) return;
+
+    const channel = supabase
+      .channel("families-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "families" },
+        (payload) => {
+          setFamilies((current) => {
+            if (payload.eventType === "DELETE") {
+              return current.filter((f) => f.id !== payload.old.id);
+            }
+            const updated = payload.new;
+            if (!updated.is_live) {
+              return current.filter((f) => f.id !== updated.id);
+            }
+            const exists = current.some((f) => f.id === updated.id);
+            if (!exists) {
+              return [updated, ...current];
+            }
+            return current.map((f) =>
+              f.id === updated.id ? { ...f, ...updated } : f,
+            );
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Fetch which families the signed-in user belongs to in a single query,
   // instead of letting every ServiceCard run its own getSession() + members
   // lookup — that per-card N+1 pattern is what made "checking" status slow

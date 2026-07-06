@@ -257,3 +257,21 @@ $$;
 
 revoke all on function public.consume_capacity(text) from public;
 grant execute on function public.consume_capacity(text) to authenticated;
+
+-- ── Realtime for live slot counts ────────────────────────────────────────
+-- Lets the browse page (Home.jsx) and the join page (Join.jsx) reflect
+-- filled_slots changes the instant another user joins, instead of only on
+-- next page load/refresh. Guarded so re-running this script is safe even
+-- if the table is already published.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'families'
+  ) then
+    alter publication supabase_realtime add table families;
+  end if;
+end;
+$$;
