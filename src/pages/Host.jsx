@@ -17,6 +17,7 @@ import { getUserCapacity, consumeCapacity, PAYMENTS_ENABLED } from "../lib/payme
 import { buildGroupRulesMessage } from "../lib/groupRules";
 import { GROUP_DESCRIPTION_EXAMPLES } from "../lib/groupDescription";
 import { uploadServiceLogo } from "../lib/imageUpload";
+import { isRecognizedService } from "../lib/serviceBrand";
 
 function LoadingOverlay({ message }) {
   return (
@@ -736,28 +737,30 @@ export default function Host() {
                 )}
               </datalist>
             </label>
-            <label className="space-y-2 text-sm text-slate-700">
-              Group photo (optional)
-              <div className="flex items-center gap-3">
-                {logoUrl && (
-                  <img
-                    src={logoUrl}
-                    alt="Group logo preview"
-                    className="h-12 w-12 rounded-2xl object-cover"
+            {!isRecognizedService(serviceName) && (
+              <label className="space-y-2 text-sm text-slate-700">
+                Group photo (optional)
+                <div className="flex items-center gap-3">
+                  {logoUrl && (
+                    <img
+                      src={logoUrl}
+                      alt="Group logo preview"
+                      className="h-12 w-12 rounded-2xl object-cover"
+                    />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoFileChange}
+                    disabled={logoUploading}
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition file:mr-3 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-xs file:font-semibold"
                   />
+                </div>
+                {logoUploading && (
+                  <span className="text-xs text-slate-500">Uploading…</span>
                 )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoFileChange}
-                  disabled={logoUploading}
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition file:mr-3 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-xs file:font-semibold"
-                />
-              </div>
-              {logoUploading && (
-                <span className="text-xs text-slate-500">Uploading…</span>
-              )}
-            </label>
+              </label>
+            )}
             <label className="space-y-2 text-sm text-slate-700">
               Your Name
               <input
@@ -1056,28 +1059,30 @@ export default function Host() {
                             className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                           />
                         </label>
-                        <label className="block space-y-2 text-sm text-slate-700">
-                          Group photo (optional)
-                          <div className="flex items-center gap-3">
-                            {editLogoUrl && (
-                              <img
-                                src={editLogoUrl}
-                                alt="Group logo preview"
-                                className="h-12 w-12 rounded-2xl object-cover"
+                        {!isRecognizedService(editServiceName) && (
+                          <label className="block space-y-2 text-sm text-slate-700">
+                            Group photo (optional)
+                            <div className="flex items-center gap-3">
+                              {editLogoUrl && (
+                                <img
+                                  src={editLogoUrl}
+                                  alt="Group logo preview"
+                                  className="h-12 w-12 rounded-2xl object-cover"
+                                />
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleEditLogoFileChange}
+                                disabled={editLogoUploading}
+                                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition file:mr-3 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-xs file:font-semibold"
                               />
+                            </div>
+                            {editLogoUploading && (
+                              <span className="text-xs text-slate-500">Uploading…</span>
                             )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleEditLogoFileChange}
-                              disabled={editLogoUploading}
-                              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition file:mr-3 file:rounded-full file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-xs file:font-semibold"
-                            />
-                          </div>
-                          {editLogoUploading && (
-                            <span className="text-xs text-slate-500">Uploading…</span>
-                          )}
-                        </label>
+                          </label>
+                        )}
                         <div className="grid gap-4 sm:grid-cols-2">
                           <label className="block space-y-2 text-sm text-slate-700">
                             Price per Slot

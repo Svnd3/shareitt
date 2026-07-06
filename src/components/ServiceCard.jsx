@@ -2,65 +2,7 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { buildDefaultGroupDescription } from "../lib/groupDescription";
-import SummertidesLogo from "../assets/summertideslogo.webp";
-import DstvLogo from "../assets/dstvlogo.svg";
-
-const CUSTOM_LOGOS = [
-  ["summertides", SummertidesLogo],
-  ["dstv", DstvLogo],
-];
-
-const getCustomLogo = (serviceName) => {
-  const lowerName = serviceName?.toLowerCase() ?? "";
-  const match = CUSTOM_LOGOS.find(([keyword]) => lowerName.includes(keyword));
-  return match ? match[1] : null;
-};
-
-const BRAND_KEYWORDS = [
-  ["spotify", "spotify.com"],
-  ["netflix", "netflix.com"],
-  ["youtube", "youtube.com"],
-  ["prime video", "amazon.com"],
-  ["amazon", "amazon.com"],
-  ["disney", "disneyplus.com"],
-  ["showmax", "showmax.com"],
-  ["apple", "apple.com"],
-  ["chatgpt", "openai.com"],
-  ["openai", "openai.com"],
-  ["claude", "claude.ai"],
-  ["canva", "canva.com"],
-  ["microsoft", "microsoft.com"],
-  ["google", "google.com"],
-  ["notion", "notion.so"],
-  ["figma", "figma.com"],
-  ["dropbox", "dropbox.com"],
-  ["adobe", "adobe.com"],
-  ["grammarly", "grammarly.com"],
-  ["duolingo", "duolingo.com"],
-  ["playstation", "playstation.com"],
-  ["xbox", "xbox.com"],
-  ["nordvpn", "nordvpn.com"],
-  ["expressvpn", "expressvpn.com"],
-  ["audible", "audible.com"],
-  ["telegram", "telegram.org"],
-  ["discord", "discord.com"],
-  ["deezer", "deezer.com"],
-  ["tidal", "tidal.com"],
-  ["soundcloud", "soundcloud.com"],
-  ["hulu", "hulu.com"],
-  ["crunchyroll", "crunchyroll.com"],
-  ["hbo", "max.com"],
-  ["linkedin", "linkedin.com"],
-];
-
-const getBrandDomain = (serviceName) => {
-  const lowerName = serviceName?.toLowerCase() ?? "";
-  const match = BRAND_KEYWORDS.find(([keyword]) =>
-    lowerName.includes(keyword),
-  );
-
-  return match ? match[1] : null;
-};
+import { getCustomLogo, getBrandDomain } from "../lib/serviceBrand";
 
 const getLogoUrl = (domain, stage) =>
   stage === 0
