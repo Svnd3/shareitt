@@ -461,7 +461,8 @@ export default function Host() {
       !hostPhone.trim() ||
       !pricePerSlot ||
       !totalSlots ||
-      !hostSocial1.trim()
+      !hostSocial1.trim() ||
+      !whatsappLink.trim()
     ) {
       setStatus("Please complete all required fields.");
       return;
@@ -696,11 +697,13 @@ export default function Host() {
             </div>
 
             <label className="space-y-2 text-sm text-slate-700">
-              WhatsApp Group Link (optional)
+              WhatsApp Group Link{" "}
+              <span className="text-saddle-600">(required)</span>
               <input
                 value={whatsappLink}
                 onChange={(event) => setWhatsappLink(event.target.value)}
                 type="url"
+                required
                 placeholder="https://chat.whatsapp.com/..."
                 className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
               />
