@@ -5,7 +5,6 @@ import SeoHead from "../components/SeoHead";
 import {
   sendHostRegistrationEmail,
   sendMemberRemovedEmail,
-  sendAdminNewFamilyEmail,
 } from "../lib/sendEmail";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../components/ToastProvider";
@@ -437,18 +436,6 @@ export default function Host() {
         console.error("Host registration email failed:", error);
       });
     }
-
-    sendAdminNewFamilyEmail({
-      family: {
-        host_name: hostName,
-        service_name: serviceName,
-        total_slots: Number(totalSlots),
-        price_per_slot: Number(pricePerSlot),
-        whatsapp_group_link: whatsappLink,
-      },
-    }).catch((error) => {
-      console.error("Admin new group email failed:", error);
-    });
 
     try {
       await consumeCapacity("host");

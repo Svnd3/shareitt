@@ -84,13 +84,36 @@ serve(async (req) => {
     );
     const verifyBody = await verifyResponse.json();
 
+    // Paystack returns 401 here if PAYSTACK_SECRET_KEY is missing/wrong or
+    // doesn't match the mode (test vs live) of the key used on the client —
+    // logged so a failed payment is diagnosable from the function logs
+    // instead of just showing "could not be verified" with no reason.
+    if (!verifyResponse.ok) {
+      console.error(
+        "Paystack verify HTTP error",
+        verifyResponse.status,
+        JSON.stringify(verifyBody),
+      );
+      return jsonResponse({ error: "Payment could not be verified." }, 402);
+    }
+
+    const expectedAmount = tierConfig.amount * 100;
     const paidSuccessfully =
-      verifyResponse.ok &&
       verifyBody?.status === true &&
       verifyBody?.data?.status === "success" &&
-      verifyBody?.data?.amount === tierConfig.amount * 100;
+      verifyBody?.data?.amount === expectedAmount;
 
     if (!paidSuccessfully) {
+      console.error("Paystack verify rejected", {
+        tier,
+        reference,
+        expectedAmount,
+        paystackStatus: verifyBody?.status,
+        transactionStatus: verifyBody?.data?.status,
+        transactionAmount: verifyBody?.data?.amount,
+        gatewayResponse: verifyBody?.data?.gateway_response,
+        message: verifyBody?.message,
+      });
       return jsonResponse({ error: "Payment could not be verified." }, 402);
     }
 
