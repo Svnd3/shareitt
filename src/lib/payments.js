@@ -1,5 +1,8 @@
 import { supabase, supabaseUrl, supabaseAnonKey } from "./supabaseClient";
 
+// Flip to true to re-enable the tiered payment paywall for hosting/joining.
+export const PAYMENTS_ENABLED = false;
+
 const VERIFY_PAYMENT_URL = `${supabaseUrl}/functions/v1/verify-payment`;
 
 // Kept in sync with supabase/functions/verify-payment/index.ts, which

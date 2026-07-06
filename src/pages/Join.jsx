@@ -14,7 +14,7 @@ import Tooltip from "../components/Tooltip";
 import SocialHandleInput from "../components/SocialHandleInput";
 import HowItWorks from "../components/HowItWorks";
 import TierPaywall from "../components/TierPaywall";
-import { getUserCapacity, consumeCapacity } from "../lib/payments";
+import { getUserCapacity, consumeCapacity, PAYMENTS_ENABLED } from "../lib/payments";
 
 export default function Join() {
   const { familyId } = useParams();
@@ -214,7 +214,7 @@ export default function Join() {
       return;
     }
 
-    if (capacity.joinRemaining > 0 || capacity.unlimitedActive) {
+    if (!PAYMENTS_ENABLED || capacity.joinRemaining > 0 || capacity.unlimitedActive) {
       await joinFamilyNow();
       return;
     }
@@ -308,10 +308,12 @@ export default function Join() {
       console.error("Admin new member email failed:", error);
     });
 
-    try {
-      await consumeCapacity("join");
-    } catch (capacityError) {
-      console.error("Consume join capacity failed:", capacityError);
+    if (PAYMENTS_ENABLED) {
+      try {
+        await consumeCapacity("join");
+      } catch (capacityError) {
+        console.error("Consume join capacity failed:", capacityError);
+      }
     }
     if (session?.user?.id) {
       await refreshCapacity(session.user.id);

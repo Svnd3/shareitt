@@ -12,7 +12,7 @@ import Tooltip from "../components/Tooltip";
 import SocialHandleInput from "../components/SocialHandleInput";
 import { SERVICE_NAME_OPTIONS } from "../lib/services";
 import TierPaywall from "../components/TierPaywall";
-import { getUserCapacity, consumeCapacity } from "../lib/payments";
+import { getUserCapacity, consumeCapacity, PAYMENTS_ENABLED } from "../lib/payments";
 
 function LoadingOverlay({ message }) {
   return (
@@ -437,10 +437,12 @@ export default function Host() {
       });
     }
 
-    try {
-      await consumeCapacity("host");
-    } catch (capacityError) {
-      console.error("Consume host capacity failed:", capacityError);
+    if (PAYMENTS_ENABLED) {
+      try {
+        await consumeCapacity("host");
+      } catch (capacityError) {
+        console.error("Consume host capacity failed:", capacityError);
+      }
     }
 
     if (session?.user?.id) {
@@ -465,7 +467,7 @@ export default function Host() {
       return;
     }
 
-    if (capacity.hostRemaining > 0 || capacity.unlimitedActive) {
+    if (!PAYMENTS_ENABLED || capacity.hostRemaining > 0 || capacity.unlimitedActive) {
       await createFamilyListing();
       return;
     }
