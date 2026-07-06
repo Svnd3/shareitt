@@ -2,8 +2,6 @@ import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendViaResend } from "../_shared/resend.ts";
 
-const ADMIN_EMAIL = "keninnofficial@gmail.com";
-
 // Sent from shareitt.xyz, verified in Resend (resend.com/domains).
 
 const CORS_HEADERS = {
@@ -107,7 +105,7 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
         from: "ShareIt <no-reply@shareitt.xyz>",
         // Fixed recipient, not caller-supplied — this is an internal
         // notification, so the destination isn't taken from payload.to.
-        to: ADMIN_EMAIL,
+        to: "keninnofficial@gmail.com",
         subject: "ShareIt login report",
         html: `
           <p>A user just signed in to ShareIt.</p>
@@ -127,7 +125,7 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
         from: "ShareIt <no-reply@shareitt.xyz>",
         // Fixed recipient, not caller-supplied — this is an internal
         // notification, so the destination isn't taken from payload.to.
-        to: ADMIN_EMAIL,
+        to: "keninnofficial@gmail.com",
         subject: "New ShareIt sign-up",
         html: `
           <p>A new user just signed up on ShareIt.</p>
@@ -137,35 +135,6 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
             <li>Phone: ${String(user_phone || "Not provided")}</li>
             <li>Method: ${String(method || "Not provided")}</li>
             <li>Signed up at: ${String(signed_up_at || new Date().toISOString())}</li>
-          </ul>
-        `,
-      };
-    }
-    case "admin_new_family": {
-      const {
-        host_name,
-        service_name,
-        total_slots,
-        price_per_slot,
-        whatsapp_group_link,
-      } = payload as Record<string, unknown>;
-
-      if (!service_name || !host_name) {
-        throw new Error("Missing new family fields.");
-      }
-
-      return {
-        from: "ShareIt <no-reply@shareitt.xyz>",
-        to: ADMIN_EMAIL,
-        subject: `New group listed: ${String(service_name)}`,
-        html: `
-          <p>A new group listing was just created on ShareIt.</p>
-          <ul>
-            <li>Host: ${String(host_name)}</li>
-            <li>Service: ${String(service_name)}</li>
-            <li>Total slots: ${String(total_slots ?? "N/A")}</li>
-            <li>Price per slot: KSh ${String(price_per_slot ?? "N/A")}</li>
-            <li>WhatsApp link: ${whatsapp_group_link ? String(whatsapp_group_link) : "Not provided"}</li>
           </ul>
         `,
       };
@@ -180,7 +149,7 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
       }
       return {
         from: "ShareIt <no-reply@shareitt.xyz>",
-        to: ADMIN_EMAIL,
+        to: "keninnofficial@gmail.com",
         subject: `New join request: ${String(service_name)}`,
         html: `
           <p>A new member just requested to join a group on ShareIt.</p>

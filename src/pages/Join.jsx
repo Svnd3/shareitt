@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../lib/supabaseClient";
-import { sendMembershipRequestEmail } from "../lib/sendEmail";
+import {
+  sendMembershipRequestEmail,
+  sendHostNewMemberEmail,
+  sendAdminNewMemberEmail,
+} from "../lib/sendEmail";
 import SeoHead from "../components/SeoHead";
 import { defaultFamilies } from "../data/defaultFamilies";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -289,6 +293,20 @@ export default function Join() {
         console.error("Membership request email failed:", error);
       });
     }
+
+    sendHostNewMemberEmail({
+      familyId: family.id,
+      memberName: name.trim(),
+    }).catch((error) => {
+      console.error("Host new member email failed:", error);
+    });
+
+    sendAdminNewMemberEmail({
+      memberName: name.trim(),
+      family,
+    }).catch((error) => {
+      console.error("Admin new member email failed:", error);
+    });
 
     try {
       await consumeCapacity("join");

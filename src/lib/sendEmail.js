@@ -98,16 +98,6 @@ export async function sendAdminNewSignupEmail({
   });
 }
 
-export async function sendAdminNewFamilyEmail({ family }) {
-  await invokeEmailFunction("admin_new_family", {
-    host_name: family.host_name,
-    service_name: family.service_name,
-    total_slots: family.total_slots,
-    price_per_slot: family.price_per_slot,
-    whatsapp_group_link: family.whatsapp_group_link,
-  });
-}
-
 export async function sendAdminNewMemberEmail({ memberName, family }) {
   await invokeEmailFunction("admin_new_member", {
     member_name: memberName,
