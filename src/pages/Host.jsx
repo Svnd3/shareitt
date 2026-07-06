@@ -11,6 +11,7 @@ import { useToast } from "../components/ToastProvider";
 import Tooltip from "../components/Tooltip";
 import SocialHandleInput from "../components/SocialHandleInput";
 import { SERVICE_NAME_OPTIONS } from "../lib/services";
+import { SERVICE_PRESETS } from "../lib/servicePresets";
 import TierPaywall from "../components/TierPaywall";
 import { getUserCapacity, consumeCapacity, PAYMENTS_ENABLED } from "../lib/payments";
 import { buildGroupRulesMessage } from "../lib/groupRules";
@@ -363,6 +364,24 @@ export default function Host() {
     setLoading(false);
   };
 
+  const handleServiceNameChange = (value) => {
+    setServiceName(value);
+    const preset = SERVICE_PRESETS[value];
+    if (preset) {
+      setPricePerSlot(String(preset.pricePerSlot));
+      setTotalSlots(String(preset.totalSlots));
+    }
+  };
+
+  const handleEditServiceNameChange = (value) => {
+    setEditServiceName(value);
+    const preset = SERVICE_PRESETS[value];
+    if (preset) {
+      setEditPricePerSlot(String(preset.pricePerSlot));
+      setEditTotalSlots(String(preset.totalSlots));
+    }
+  };
+
   const handleStartEdit = (family) => {
     setEditingFamilyId(family.id);
     setEditServiceName(family.service_name || "");
@@ -657,7 +676,7 @@ export default function Host() {
               Service Name
               <input
                 value={serviceName}
-                onChange={(event) => setServiceName(event.target.value)}
+                onChange={(event) => handleServiceNameChange(event.target.value)}
                 type="text"
                 list="service-name-options"
                 placeholder="Select or type a service"
@@ -942,7 +961,7 @@ export default function Host() {
                           <input
                             value={editServiceName}
                             onChange={(event) =>
-                              setEditServiceName(event.target.value)
+                              handleEditServiceNameChange(event.target.value)
                             }
                             type="text"
                             className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"

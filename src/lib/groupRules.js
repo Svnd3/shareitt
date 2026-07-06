@@ -1,8 +1,7 @@
 // Family/group plans where one missed payment can put the whole plan at risk
 // (the provider can flag or dissolve the plan if it isn't renewed on time).
 const RENEWAL_RISK_SERVICES = new Set([
-  "Spotify Family",
-  "Netflix Standard",
+  "Spotify Premium",
   "Netflix Premium",
   "YouTube Premium",
   "Prime Video",

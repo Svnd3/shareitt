@@ -1,7 +1,5 @@
 export const SERVICE_NAME_OPTIONS = [
   "Spotify Premium",
-  "Spotify Family",
-  "Netflix Standard",
   "Netflix Premium",
   "YouTube Premium",
   "Prime Video",
