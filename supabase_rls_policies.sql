@@ -258,6 +258,38 @@ $$;
 revoke all on function public.consume_capacity(text) from public;
 grant execute on function public.consume_capacity(text) to authenticated;
 
+-- ── Leaving a group ──────────────────────────────────────────────────────
+-- A joined member can't delete their own `members` row today — the only
+-- delete policy is "members_delete_host" (host-only) — and even if they
+-- could, the follow-up `families.filled_slots` decrement would be blocked
+-- too, since "families_update_own" only allows the host to update their own
+-- listing. This SECURITY DEFINER function is the narrow, safe fix: it can
+-- only delete the caller's own membership row for the given family and
+-- decrement that family's filled_slots by 1 (never below 0) — nothing else.
+create or replace function public.leave_family(p_family_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from members
+  where family_id = p_family_id
+    and user_id = auth.uid();
+
+  if not found then
+    raise exception 'You are not a member of this group';
+  end if;
+
+  update families
+  set filled_slots = greatest(filled_slots - 1, 0)
+  where id = p_family_id;
+end;
+$$;
+
+revoke all on function public.leave_family(uuid) from public;
+grant execute on function public.leave_family(uuid) to authenticated;
+
 -- ── Realtime for live slot counts ────────────────────────────────────────
 -- Lets the browse page (Home.jsx) and the join page (Join.jsx) reflect
 -- filled_slots changes the instant another user joins, instead of only on

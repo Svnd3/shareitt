@@ -127,6 +127,14 @@ export async function sendHostFamilyFullEmail({ familyId }) {
   });
 }
 
+export async function sendMemberLeftEmail({ familyId, memberName, reason }) {
+  await invokeEmailFunction("member_left", {
+    family_id: familyId,
+    member_name: memberName,
+    reason,
+  });
+}
+
 export async function sendMemberRemovedEmail({
   email,
   memberName,

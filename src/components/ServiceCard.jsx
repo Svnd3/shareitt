@@ -66,7 +66,12 @@ const getLogoUrl = (domain, stage) =>
     ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
     : `https://icons.duckduckgo.com/ip3/${domain}.ico`;
 
-export default function ServiceCard({ family, userId, isMember = false }) {
+export default function ServiceCard({
+  family,
+  userId,
+  isMember = false,
+  onLeave,
+}) {
   const isHost = Boolean(userId) && userId === family.created_by;
   const [expanded, setExpanded] = useState(false);
   const [flagOpen, setFlagOpen] = useState(false);
@@ -77,6 +82,31 @@ export default function ServiceCard({ family, userId, isMember = false }) {
   const [uniqueName, setUniqueName] = useState(family.unique_name ?? "");
   const [editingUnique, setEditingUnique] = useState(false);
   const [savingUnique, setSavingUnique] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+
+  const handleLeave = async () => {
+    if (
+      !window.confirm(
+        `Leave the ${family.service_name} group? You can rejoin later if a slot opens up.`,
+      )
+    ) {
+      return;
+    }
+
+    setLeaving(true);
+    const { error } = await supabase.rpc("leave_family", {
+      p_family_id: family.id,
+    });
+    setLeaving(false);
+
+    if (error) {
+      console.error("Leave family error:", error);
+      window.alert("Unable to leave this group. Please try again.");
+      return;
+    }
+
+    onLeave?.(family.id);
+  };
 
   const familyUniqueName = family.unique_name ?? "";
   const safeUniqueName = uniqueName ?? "";
@@ -369,9 +399,19 @@ export default function ServiceCard({ family, userId, isMember = false }) {
                   You are the host
                 </span>
               ) : isMember ? (
-                <span className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
-                  Joined
-                </span>
+                <>
+                  <span className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
+                    Joined
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLeave}
+                    disabled={leaving}
+                    className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                  >
+                    {leaving ? "Leaving…" : "Leave group"}
+                  </button>
+                </>
               ) : (
                 <Link
                   to={`/join/${family.id}`}

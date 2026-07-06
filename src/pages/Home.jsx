@@ -901,6 +901,13 @@ export default function Home({ session, authLoading }) {
                     family={family}
                     userId={session?.user?.id}
                     isMember={memberFamilyIds.has(family.id)}
+                    onLeave={(familyId) =>
+                      setMemberFamilyIds((current) => {
+                        const next = new Set(current);
+                        next.delete(familyId);
+                        return next;
+                      })
+                    }
                   />
                 ))
               )}

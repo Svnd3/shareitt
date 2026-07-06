@@ -7,6 +7,7 @@ import {
   sendAdminNewMemberEmail,
   sendAdminFamilyFullEmail,
   sendHostFamilyFullEmail,
+  sendMemberLeftEmail,
 } from "../lib/sendEmail";
 import SeoHead from "../components/SeoHead";
 import { defaultFamilies } from "../data/defaultFamilies";
@@ -32,6 +33,9 @@ export default function Join() {
   const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(false);
   const [joined, setJoined] = useState(false);
+  const [joinedMemberName, setJoinedMemberName] = useState("");
+  const [abandoning, setAbandoning] = useState(false);
+  const [abandoned, setAbandoned] = useState(false);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [capacity, setCapacity] = useState({
@@ -365,12 +369,47 @@ export default function Join() {
       "success",
     );
     setJoined(true);
+    setJoinedMemberName(name.trim());
     setLoading(false);
     setName("");
     setPhone("");
     setEmail("");
     setSocialMedia1("");
     setSocialMedia2("");
+  };
+
+  const handleAbandon = async () => {
+    if (
+      !window.confirm(
+        "Leave this group? Your slot will open up for someone else to join.",
+      )
+    ) {
+      return;
+    }
+
+    setAbandoning(true);
+    const { error } = await supabase.rpc("leave_family", {
+      p_family_id: family.id,
+    });
+
+    if (error) {
+      console.error("Abandon group error:", error);
+      toast.showToast("Unable to leave this group. Please try again.", "error");
+      setAbandoning(false);
+      return;
+    }
+
+    sendMemberLeftEmail({
+      familyId: family.id,
+      memberName: joinedMemberName || "A member",
+    }).catch((emailError) => {
+      console.error("Member left email failed:", emailError);
+    });
+
+    toast.showToast("You have left the group.", "success");
+    setAbandoning(false);
+    setAbandoned(true);
+    setJoined(false);
   };
 
   if (authLoading) {
@@ -672,6 +711,38 @@ export default function Join() {
                   >
                     Open WhatsApp group
                   </a>
+
+                  <div className="mt-5 border-t border-saddle-200 pt-4">
+                    <p className="text-saddle-800">
+                      Joined by mistake? Want to join a different service
+                      instead?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleAbandon}
+                      disabled={abandoning}
+                      className="mt-3 inline-flex rounded-full border border-rose-200 bg-rose-50 px-5 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                    >
+                      {abandoning ? "Leaving…" : "Abandon group"}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {abandoned && (
+                <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">
+                    You've left the group.
+                  </p>
+                  <p className="mt-2">
+                    Your slot has been freed up. Browse other groups if you'd
+                    like to join a different one.
+                  </p>
+                  <Link
+                    to="/"
+                    className="mt-4 inline-flex rounded-full bg-[#1A7A3C] px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                  >
+                    Browse groups
+                  </Link>
                 </div>
               )}
             </>

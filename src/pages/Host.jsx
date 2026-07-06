@@ -306,25 +306,15 @@ export default function Host() {
     setStatus("Leaving group...");
     setLoading(true);
 
-    const { error } = await supabase
-      .from("members")
-      .delete()
-      .eq("family_id", family.id)
-      .eq("user_id", session?.user?.id)
-      .limit(1);
+    const { error } = await supabase.rpc("leave_family", {
+      p_family_id: family.id,
+    });
 
     if (error) {
       console.error("Leave family error:", error);
       setStatus("Unable to leave this group. Please try again.");
       setLoading(false);
       return;
-    }
-
-    if (family.id) {
-      await supabase
-        .from("families")
-        .update({ filled_slots: Math.max(0, family.filled_slots - 1) })
-        .eq("id", family.id);
     }
 
     setJoinedFamilies((current) =>

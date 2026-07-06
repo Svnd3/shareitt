@@ -264,6 +264,49 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
         `,
       };
     }
+    case "member_left": {
+      const { family_id, member_name, reason } = payload as Record<
+        string,
+        unknown
+      >;
+      if (!family_id || !member_name) {
+        throw new Error("Missing member left fields.");
+      }
+
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!supabaseUrl || !serviceRoleKey) {
+        throw new Error("Server is not configured to look up the host.");
+      }
+
+      // host_email has no anon/authenticated column grant (see Join.jsx), so
+      // it's looked up here with the service role key instead of ever being
+      // sent to the browser.
+      const adminClient = createClient(supabaseUrl, serviceRoleKey);
+      const { data: family, error: lookupError } = await adminClient
+        .from("families")
+        .select("host_email, host_name, service_name")
+        .eq("id", family_id as string)
+        .single();
+
+      if (lookupError || !family?.host_email) {
+        throw new Error("Could not find a host email for this group.");
+      }
+
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        // Sent to both the host and ShareIt's internal address, so it's a
+        // fixed recipient list, not caller-supplied.
+        to: [family.host_email, "keninnofficial@gmail.com"],
+        subject: `${String(member_name)} left your ${String(family.service_name)} group`,
+        html: `
+          <p>Hi ${String(family.host_name)},</p>
+          <p><strong>${String(member_name)}</strong> just left your <strong>${String(family.service_name)}</strong> group on ShareIt, freeing up their slot.</p>
+          ${reason ? `<p>Reason given: ${String(reason)}</p>` : ""}
+          <p>Check your Host dashboard — the slot is now open for someone new to join.</p>
+        `,
+      };
+    }
     case "member_removed": {
       const { to, member_name, service_name, host_name } = payload as Record<
         string,
