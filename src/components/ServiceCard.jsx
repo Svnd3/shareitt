@@ -189,8 +189,21 @@ export default function ServiceCard({
         <p className="w-full truncate text-center text-xs font-medium text-slate-600">
           {family.service_name}
         </p>
-        <p className="text-center text-xs font-bold text-saddle-600">
-          KSh {family.price_per_slot}
+        <p className="flex items-center justify-center gap-1 text-center text-xs font-bold text-saddle-600">
+          <span>KSh {family.price_per_slot}</span>
+          {hasOpenSlot && (
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                slotsLeft <= 1
+                  ? "bg-red-100 text-red-700"
+                  : slotsLeft <= 3
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {slotsLeft} left
+            </span>
+          )}
         </p>
       </div>
 

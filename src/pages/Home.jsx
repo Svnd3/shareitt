@@ -372,14 +372,53 @@ export default function Home({ session, authLoading }) {
         : family.filled_slots < family.total_slots,
     );
 
-    if (!searchQuery) return filteredByView;
+    const searched = !searchQuery
+      ? filteredByView
+      : filteredByView.filter((family) => {
+          const query = searchQuery.toLowerCase();
+          return (
+            family.service_name.toLowerCase().includes(query) ||
+            family.host_name.toLowerCase().includes(query)
+          );
+        });
 
-    const query = searchQuery.toLowerCase();
-    return filteredByView.filter(
-      (family) =>
-        family.service_name.toLowerCase().includes(query) ||
-        family.host_name.toLowerCase().includes(query),
-    );
+    if (searched.length === 0) return searched;
+
+    // Rank by "deal score" instead of just newest-first: a blend of urgency
+    // (fewer slots left = closer to gone = more pressure to grab it) and
+    // affordability (cheaper per slot = more attractive), each normalized
+    // against the current result set so the score stays meaningful no
+    // matter which service/price/slot filters are active. Urgency leads
+    // since that's the core signal; affordability is the tiebreaker that
+    // also surfaces genuinely cheap deals ahead of merely-scarce ones.
+    const slotsLeftOf = (family) => family.total_slots - family.filled_slots;
+    const priceOf = (family) => Number(family.price_per_slot) || 0;
+
+    const slotsLeftValues = searched.map(slotsLeftOf);
+    const priceValues = searched.map(priceOf);
+    const minSlots = Math.min(...slotsLeftValues);
+    const maxSlots = Math.max(...slotsLeftValues);
+    const minPrice = Math.min(...priceValues);
+    const maxPrice = Math.max(...priceValues);
+
+    const dealScore = (family) => {
+      const urgency =
+        maxSlots === minSlots
+          ? 0.5
+          : 1 - (slotsLeftOf(family) - minSlots) / (maxSlots - minSlots);
+      const affordability =
+        maxPrice === minPrice
+          ? 0.5
+          : 1 - (priceOf(family) - minPrice) / (maxPrice - minPrice);
+
+      return urgency * 0.65 + affordability * 0.35;
+    };
+
+    return [...searched].sort((a, b) => {
+      const scoreDiff = dealScore(b) - dealScore(a);
+      if (scoreDiff !== 0) return scoreDiff;
+      return slotsLeftOf(a) - slotsLeftOf(b) || priceOf(a) - priceOf(b);
+    });
   }, [
     activeService,
     families,
