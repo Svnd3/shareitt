@@ -22,11 +22,11 @@ const TIERS: Record<
     isUnlimited: boolean;
   }
 > = {
-  join: { amount: 20, hostSlotsTotal: 0, joinSlotsTotal: 1, isUnlimited: false },
+  join: { amount: 29, hostSlotsTotal: 0, joinSlotsTotal: 1, isUnlimited: false },
   host: { amount: 20, hostSlotsTotal: 1, joinSlotsTotal: 0, isUnlimited: false },
-  combo: { amount: 30, hostSlotsTotal: 1, joinSlotsTotal: 1, isUnlimited: false },
-  power: { amount: 60, hostSlotsTotal: 4, joinSlotsTotal: 3, isUnlimited: false },
-  unlimited: { amount: 200, hostSlotsTotal: 0, joinSlotsTotal: 0, isUnlimited: true },
+  combo: { amount: 39, hostSlotsTotal: 1, joinSlotsTotal: 1, isUnlimited: false },
+  power: { amount: 119, hostSlotsTotal: 4, joinSlotsTotal: 3, isUnlimited: false },
+  unlimited: { amount: 249, hostSlotsTotal: 0, joinSlotsTotal: 0, isUnlimited: true },
 };
 
 const UNLIMITED_DURATION_MS = 90 * 24 * 60 * 60 * 1000;
