@@ -308,6 +308,15 @@ on conflict (id) do nothing;
 -- being backfilled here.
 alter table families add column if not exists group_description text;
 
+-- Column-level grants on this table (see the RLS-hardening comment at the
+-- top of this file) do NOT auto-extend to new columns — ALTER TABLE ADD
+-- COLUMN grants INSERT/UPDATE/REFERENCES to existing grantees but never
+-- SELECT. Forgetting this line is exactly what silently 401'd every
+-- families read once logo_url was added, since select("*") — or any select
+-- list containing an ungranted column — fails the whole query, not just
+-- that column.
+grant select (logo_url, group_description) on public.families to anon, authenticated;
+
 -- Anyone can view a logo (the marketplace listing itself is public), but
 -- only the uploader can add/replace/remove their own file. Storage sets
 -- `owner` to auth.uid() automatically on upload via the client SDK.
