@@ -19,11 +19,8 @@ import Host from "./pages/Host";
 import Report from "./pages/Report";
 import Auth from "./pages/Auth";
 import HowItWorksPage from "./pages/HowItWorks";
-import Maintenance from "./pages/Maintenance";
 import Footer from "./components/Footer";
 import { ToastProvider } from "./components/ToastProvider";
-
-const MAINTENANCE_MODE = import.meta.env.VITE_MAINTENANCE_MODE === "true";
 
 // Rejects after `ms` if `promise` hasn't settled — used so a hung Supabase
 // auth request (e.g. a cold-starting project) can't freeze the app forever.
@@ -473,10 +470,6 @@ function AppRoutes() {
 }
 
 function App() {
-  if (MAINTENANCE_MODE) {
-    return <Maintenance />;
-  }
-
   return (
     <BrowserRouter>
       <ToastProvider>
