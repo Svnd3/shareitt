@@ -72,9 +72,9 @@ export default function Host() {
   const [editLogoUploading, setEditLogoUploading] = useState(false);
   const toast = useToast();
 
-  const refreshCapacity = async (userId) => {
+  const refreshCapacity = async (userId, email) => {
     if (!userId) return;
-    setCapacity(await getUserCapacity(userId));
+    setCapacity(await getUserCapacity(userId, email));
   };
 
   const loadHostData = async (userId) => {
@@ -164,7 +164,7 @@ export default function Host() {
   useEffect(() => {
     if (session?.user?.id) {
       loadHostData(session.user.id);
-      refreshCapacity(session.user.id);
+      refreshCapacity(session.user.id, session.user.email);
     } else {
       setMyFamilies([]);
       setFamilyMembers({});
@@ -577,7 +577,7 @@ export default function Host() {
       });
     }
 
-    if (PAYMENTS_ENABLED) {
+    if (PAYMENTS_ENABLED && !capacity.unlimitedActive) {
       try {
         await consumeCapacity("host");
       } catch (capacityError) {
@@ -587,7 +587,7 @@ export default function Host() {
 
     if (session?.user?.id) {
       await refreshHostData(session.user.id);
-      await refreshCapacity(session.user.id);
+      await refreshCapacity(session.user.id, session.user.email);
     }
 
     setTimeout(() => navigate("/"), 2000);
@@ -619,7 +619,7 @@ export default function Host() {
   const handlePaywallSuccess = async () => {
     setShowPaywall(false);
     if (session?.user?.id) {
-      await refreshCapacity(session.user.id);
+      await refreshCapacity(session.user.id, session.user.email);
     }
     await createFamilyListing();
   };

@@ -54,7 +54,18 @@ export const PRICING_TIERS = [
   },
 ];
 
-export async function getUserCapacity(userId) {
+// These accounts never see the paywall — hosting and joining are free for
+// them regardless of what's in payment_grants.
+const FREE_ACCESS_EMAILS = new Set([
+  "hezronsande2@gmail.com",
+  "keninnofficial@gmail.com",
+]);
+
+export async function getUserCapacity(userId, email) {
+  if (email && FREE_ACCESS_EMAILS.has(email.toLowerCase())) {
+    return { hostRemaining: Infinity, joinRemaining: Infinity, unlimitedActive: true };
+  }
+
   if (!userId) {
     return { hostRemaining: 0, joinRemaining: 0, unlimitedActive: false };
   }

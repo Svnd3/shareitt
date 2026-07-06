@@ -47,9 +47,9 @@ export default function Join() {
   const [showPaywall, setShowPaywall] = useState(false);
   const toast = useToast();
 
-  const refreshCapacity = async (userId) => {
+  const refreshCapacity = async (userId, email) => {
     if (!userId) return;
-    setCapacity(await getUserCapacity(userId));
+    setCapacity(await getUserCapacity(userId, email));
   };
 
   useEffect(() => {
@@ -171,7 +171,7 @@ export default function Join() {
 
   useEffect(() => {
     if (session?.user?.id) {
-      refreshCapacity(session.user.id);
+      refreshCapacity(session.user.id, session.user.email);
     }
   }, [session]);
 
@@ -261,7 +261,7 @@ export default function Join() {
   const handlePaywallSuccess = async () => {
     setShowPaywall(false);
     if (session?.user?.id) {
-      await refreshCapacity(session.user.id);
+      await refreshCapacity(session.user.id, session.user.email);
     }
     await joinFamilyNow();
   };
@@ -354,7 +354,7 @@ export default function Join() {
       });
     }
 
-    if (PAYMENTS_ENABLED) {
+    if (PAYMENTS_ENABLED && !capacity.unlimitedActive) {
       try {
         await consumeCapacity("join");
       } catch (capacityError) {
@@ -362,7 +362,7 @@ export default function Join() {
       }
     }
     if (session?.user?.id) {
-      await refreshCapacity(session.user.id);
+      await refreshCapacity(session.user.id, session.user.email);
     }
 
     toast.showToast(
