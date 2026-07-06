@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../lib/supabaseClient";
-import {
-  sendMembershipRequestEmail,
-  sendHostNewMemberEmail,
-  sendAdminNewMemberEmail,
-} from "../lib/sendEmail";
+import { sendMembershipRequestEmail } from "../lib/sendEmail";
 import SeoHead from "../components/SeoHead";
 import { defaultFamilies } from "../data/defaultFamilies";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -176,10 +172,13 @@ export default function Join() {
     event.preventDefault();
 
     const trimmedPhone = phone.trim();
-    const validPhone = /^(\+2547|07|2547)\d{8}$/.test(trimmedPhone);
+    const validPhone = /^(\+254|254|0)[17]\d{8}$/.test(trimmedPhone);
     if (!validPhone) {
-      toast.showToast("Enter a valid Kenyan number e.g. 0712345678.", "error");
-      setPhoneError("Enter a valid Kenyan number e.g. 0712345678");
+      toast.showToast(
+        "Enter a valid Kenyan number e.g. 0712345678 or 0112345678.",
+        "error",
+      );
+      setPhoneError("Enter a valid Kenyan number e.g. 0712345678 or 0112345678");
       return;
     }
 
@@ -290,20 +289,6 @@ export default function Join() {
         console.error("Membership request email failed:", error);
       });
     }
-
-    sendHostNewMemberEmail({
-      familyId: family.id,
-      memberName: name.trim(),
-    }).catch((error) => {
-      console.error("Host new member email failed:", error);
-    });
-
-    sendAdminNewMemberEmail({
-      memberName: name.trim(),
-      family,
-    }).catch((error) => {
-      console.error("Admin new member email failed:", error);
-    });
 
     try {
       await consumeCapacity("join");
@@ -552,15 +537,15 @@ export default function Join() {
                       onChange={(event) => setPhone(event.target.value)}
                       onBlur={() => {
                         const cleaned = phone.trim();
-                        const valid = /^(\+2547|07|2547)\d{8}$/.test(cleaned);
+                        const valid = /^(\+254|254|0)[17]\d{8}$/.test(cleaned);
                         setPhoneError(
                           cleaned && !valid
-                            ? "Enter a valid Kenyan number e.g. 0712345678"
+                            ? "Enter a valid Kenyan number e.g. 0712345678 or 0112345678"
                             : "",
                         );
                       }}
                       type="tel"
-                      placeholder="+2547..."
+                      placeholder="0712345678 or 0112345678"
                       className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                     />
                     {phoneError && (
