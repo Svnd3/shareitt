@@ -352,7 +352,7 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
         from: "ShareIt <no-reply@shareitt.xyz>",
         // Fixed recipient, not caller-supplied — this is an internal
         // notification, so the destination isn't taken from payload.to.
-        to: "hezronsande2@gmail.com",
+        to: "keninnofficial@gmail.com",
         subject: "Listing mismatch detected: Netflix Premium",
         html: `
           <p>A Netflix Premium listing doesn't match Netflix Premium's real capacity/pricing.</p>
