@@ -5,6 +5,8 @@ import SeoHead from "../components/SeoHead";
 import {
   sendHostRegistrationEmail,
   sendMemberRemovedEmail,
+  sendNetflixSlotMismatchHostEmail,
+  sendNetflixSlotMismatchAdminEmail,
 } from "../lib/sendEmail";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../components/ToastProvider";
@@ -18,6 +20,7 @@ import { buildGroupRulesMessage } from "../lib/groupRules";
 import { GROUP_DESCRIPTION_EXAMPLES } from "../lib/groupDescription";
 import { uploadServiceLogo } from "../lib/imageUpload";
 import { isRecognizedService } from "../lib/serviceBrand";
+import { isNetflixPremiumSlotMismatch } from "../lib/netflixCompliance";
 
 function LoadingOverlay({ message }) {
   return (
@@ -478,6 +481,14 @@ export default function Host() {
       return;
     }
 
+    flagNetflixSlotMismatch({
+      familyId: family.id,
+      hostName: family.host_name,
+      serviceName: editServiceName.trim(),
+      totalSlots: newTotalSlots,
+      pricePerSlot: Number(editPricePerSlot),
+    });
+
     setEditingFamilyId(null);
     if (session?.user?.id) {
       await refreshHostData(session.user.id);
@@ -517,29 +528,55 @@ export default function Host() {
     }
   };
 
+  const flagNetflixSlotMismatch = ({
+    familyId,
+    hostName,
+    serviceName,
+    totalSlots,
+    pricePerSlot,
+  }) => {
+    if (!isNetflixPremiumSlotMismatch(serviceName, totalSlots)) return;
+
+    sendNetflixSlotMismatchHostEmail({ familyId }).catch((error) => {
+      console.error("Netflix slot mismatch host email failed:", error);
+    });
+    sendNetflixSlotMismatchAdminEmail({
+      familyId,
+      hostName,
+      totalSlots,
+      pricePerSlot,
+    }).catch((error) => {
+      console.error("Netflix slot mismatch admin email failed:", error);
+    });
+  };
+
   const createFamilyListing = async () => {
     setLoading(true);
     setStatus("Saving your group listing...");
 
-    const { error } = await supabase.from("families").insert([
-      {
-        service_name: serviceName,
-        host_name: hostName,
-        host_phone: hostPhone,
-        price_per_slot: Number(pricePerSlot),
-        total_slots: Number(totalSlots),
-        filled_slots: 0,
-        is_verified: false,
-        is_live: true,
-        whatsapp_group_link: whatsappLink,
-        hosting_method: "whatsapp",
-        host_social_1: hostSocial1.trim(),
-        host_email: session?.user?.email || null,
-        logo_url: logoUrl || null,
-        group_description: groupDescription.trim() || null,
-        created_by: session?.user?.id,
-      },
-    ]);
+    const { data: inserted, error } = await supabase
+      .from("families")
+      .insert([
+        {
+          service_name: serviceName,
+          host_name: hostName,
+          host_phone: hostPhone,
+          price_per_slot: Number(pricePerSlot),
+          total_slots: Number(totalSlots),
+          filled_slots: 0,
+          is_verified: false,
+          is_live: true,
+          whatsapp_group_link: whatsappLink,
+          hosting_method: "whatsapp",
+          host_social_1: hostSocial1.trim(),
+          host_email: session?.user?.email || null,
+          logo_url: logoUrl || null,
+          group_description: groupDescription.trim() || null,
+          created_by: session?.user?.id,
+        },
+      ])
+      .select("id")
+      .single();
 
     if (error) {
       console.error("Supabase error:", error);
@@ -549,6 +586,14 @@ export default function Host() {
       setLoading(false);
       return;
     }
+
+    flagNetflixSlotMismatch({
+      familyId: inserted?.id,
+      hostName,
+      serviceName,
+      totalSlots: Number(totalSlots),
+      pricePerSlot: Number(pricePerSlot),
+    });
 
     setStatus("Group created.");
     setLoading(false);

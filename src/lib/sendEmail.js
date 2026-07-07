@@ -135,6 +135,26 @@ export async function sendMemberLeftEmail({ familyId, memberName, reason }) {
   });
 }
 
+export async function sendNetflixSlotMismatchHostEmail({ familyId }) {
+  await invokeEmailFunction("netflix_slot_mismatch_host", {
+    family_id: familyId,
+  });
+}
+
+export async function sendNetflixSlotMismatchAdminEmail({
+  familyId,
+  hostName,
+  totalSlots,
+  pricePerSlot,
+}) {
+  await invokeEmailFunction("netflix_slot_mismatch_admin", {
+    family_id: familyId,
+    host_name: hostName,
+    total_slots: totalSlots,
+    price_per_slot: pricePerSlot,
+  });
+}
+
 export async function sendMemberRemovedEmail({
   email,
   memberName,

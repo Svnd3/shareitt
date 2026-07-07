@@ -307,6 +307,65 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
         `,
       };
     }
+    case "netflix_slot_mismatch_host": {
+      const { family_id } = payload as Record<string, unknown>;
+      if (!family_id) {
+        throw new Error("Missing family id.");
+      }
+
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!supabaseUrl || !serviceRoleKey) {
+        throw new Error("Server is not configured to look up the host.");
+      }
+
+      // host_email has no anon/authenticated column grant (see Join.jsx), so
+      // it's looked up here with the service role key instead of ever being
+      // sent to the browser.
+      const adminClient = createClient(supabaseUrl, serviceRoleKey);
+      const { data: family, error: lookupError } = await adminClient
+        .from("families")
+        .select("host_email, host_name, total_slots")
+        .eq("id", family_id as string)
+        .single();
+
+      if (lookupError || !family?.host_email) {
+        throw new Error("Could not find a host email for this group.");
+      }
+
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        to: family.host_email,
+        subject: "Quick update needed for your Netflix Premium group",
+        html: `
+          <p>Hi ${String(family.host_name)},</p>
+          <p>Your Netflix Premium group on ShareIt is currently set up for ${String(family.total_slots)} member slot(s), which is fewer than what Netflix Premium actually supports.</p>
+          <p>Netflix Premium (around KSh 1,100/month) covers up to 6 people sharing the plan. Could you update your listing to 6 slots, with the price per slot adjusted so the total still covers KSh 1,100/month? That keeps things accurate for anyone joining.</p>
+          <p>Thanks for hosting on ShareIt!</p>
+        `,
+      };
+    }
+    case "netflix_slot_mismatch_admin": {
+      const { family_id, host_name, total_slots, price_per_slot } =
+        payload as Record<string, unknown>;
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        // Fixed recipient, not caller-supplied — this is an internal
+        // notification, so the destination isn't taken from payload.to.
+        to: "hezronsande2@gmail.com",
+        subject: "Listing mismatch detected: Netflix Premium",
+        html: `
+          <p>A Netflix Premium listing doesn't match Netflix Premium's real capacity/pricing.</p>
+          <ul>
+            <li>Family ID: ${String(family_id ?? "N/A")}</li>
+            <li>Host: ${String(host_name ?? "N/A")}</li>
+            <li>Current slots: ${String(total_slots ?? "N/A")}</li>
+            <li>Price per slot: KSh ${String(price_per_slot ?? "N/A")}</li>
+          </ul>
+          <p>The host has been emailed with instructions to update their slot count and pricing.</p>
+        `,
+      };
+    }
     case "member_removed": {
       const { to, member_name, service_name, host_name } = payload as Record<
         string,
