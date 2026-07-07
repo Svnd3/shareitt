@@ -30,7 +30,7 @@ export const PRICING_TIERS = [
   {
     id: "combo",
     name: "Combo",
-    amount: 39,
+    amount: 49,
     hostSlots: 1,
     joinSlots: 1,
     description: "Host 1 + Join 1",
