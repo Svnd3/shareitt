@@ -13,6 +13,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../components/ToastProvider";
 import Tooltip from "../components/Tooltip";
 import SocialHandleInput from "../components/SocialHandleInput";
+import ServiceNameInput from "../components/ServiceNameInput";
 import { SERVICE_NAME_OPTIONS } from "../lib/services";
 import { SERVICE_PRESETS } from "../lib/servicePresets";
 import TierPaywall from "../components/TierPaywall";
@@ -23,6 +24,10 @@ import { uploadServiceLogo } from "../lib/imageUpload";
 import { isRecognizedService } from "../lib/serviceBrand";
 import { isNetflixPremiumSlotMismatch } from "../lib/netflixCompliance";
 import { isAdminEmail } from "../lib/adminAccess";
+
+const SERVICE_NAME_SUGGESTIONS = SERVICE_NAME_OPTIONS.filter(
+  (option) => option !== "Other",
+);
 
 function LoadingOverlay({ message }) {
   return (
@@ -780,24 +785,16 @@ export default function Host() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <label className="space-y-2 text-sm text-slate-700">
               Service Name
-              <input
+              <ServiceNameInput
                 value={serviceName}
-                onChange={(event) => handleServiceNameChange(event.target.value)}
-                type="text"
-                list="service-name-options"
+                onChange={handleServiceNameChange}
+                options={SERVICE_NAME_SUGGESTIONS}
                 placeholder="Select or type a service"
                 className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
               />
-              <datalist id="service-name-options">
-                {SERVICE_NAME_OPTIONS.filter((option) => option !== "Other").map(
-                  (option) => (
-                    <option key={option} value={option} />
-                  ),
-                )}
-              </datalist>
             </label>
             {!isRecognizedService(serviceName) && (
-              <label className="space-y-2 text-sm text-slate-700">
+              <label className="space-y-2 text-sm text-slate-700 sm:hidden">
                 Group photo (optional)
                 <div className="flex items-center gap-3">
                   {logoUrl && (
@@ -1109,17 +1106,15 @@ export default function Host() {
                       <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
                         <label className="block space-y-2 text-sm text-slate-700">
                           Service Name
-                          <input
+                          <ServiceNameInput
                             value={editServiceName}
-                            onChange={(event) =>
-                              handleEditServiceNameChange(event.target.value)
-                            }
-                            type="text"
+                            onChange={handleEditServiceNameChange}
+                            options={SERVICE_NAME_SUGGESTIONS}
                             className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                           />
                         </label>
                         {!isRecognizedService(editServiceName) && (
-                          <label className="block space-y-2 text-sm text-slate-700">
+                          <label className="block space-y-2 text-sm text-slate-700 sm:hidden">
                             Group photo (optional)
                             <div className="flex items-center gap-3">
                               {editLogoUrl && (
