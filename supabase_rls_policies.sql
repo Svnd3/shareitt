@@ -36,13 +36,21 @@ create policy "families_insert_own"
   to authenticated
   with check (created_by = auth.uid());
 
--- Hosts can only edit/delete their own listings.
+-- Hosts can edit their own listings; the two admin accounts below can edit
+-- any family's details (see src/lib/adminAccess.js for the client-side
+-- mirror of this allowlist).
 drop policy if exists "families_update_own" on families;
 create policy "families_update_own"
   on families for update
   to authenticated
-  using (created_by = auth.uid())
-  with check (created_by = auth.uid());
+  using (
+    created_by = auth.uid()
+    or auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
+  )
+  with check (
+    created_by = auth.uid()
+    or auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
+  );
 
 drop policy if exists "families_delete_own" on families;
 create policy "families_delete_own"

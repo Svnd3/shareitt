@@ -1,4 +1,5 @@
 import { supabase, supabaseUrl, supabaseAnonKey } from "./supabaseClient";
+import { isAdminEmail } from "./adminAccess";
 
 // Flip to true to re-enable the tiered payment paywall for hosting/joining.
 export const PAYMENTS_ENABLED = true;
@@ -54,15 +55,8 @@ export const PRICING_TIERS = [
   },
 ];
 
-// These accounts never see the paywall — hosting and joining are free for
-// them regardless of what's in payment_grants.
-const FREE_ACCESS_EMAILS = new Set([
-  "hezronsande2@gmail.com",
-  "keninnofficial@gmail.com",
-]);
-
 export async function getUserCapacity(userId, email) {
-  if (email && FREE_ACCESS_EMAILS.has(email.toLowerCase())) {
+  if (isAdminEmail(email)) {
     return { hostRemaining: Infinity, joinRemaining: Infinity, unlimitedActive: true };
   }
 

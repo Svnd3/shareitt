@@ -21,6 +21,7 @@ import { GROUP_DESCRIPTION_EXAMPLES } from "../lib/groupDescription";
 import { uploadServiceLogo } from "../lib/imageUpload";
 import { isRecognizedService } from "../lib/serviceBrand";
 import { isNetflixPremiumSlotMismatch } from "../lib/netflixCompliance";
+import { isAdminEmail } from "../lib/adminAccess";
 
 function LoadingOverlay({ message }) {
   return (
@@ -81,15 +82,20 @@ export default function Host() {
     setCapacity(await getUserCapacity(userId, email));
   };
 
-  const loadHostData = async (userId) => {
+  const loadHostData = async (userId, isAdmin) => {
     setManagementLoading(true);
-    const { data: families, error: familiesError } = await supabase
+    let familiesQuery = supabase
       .from("families")
       .select(
         "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,logo_url,unique_name,group_description,created_by,created_at",
-      )
-      .eq("created_by", userId)
-      .order("created_at", { ascending: false });
+      );
+    if (!isAdmin) {
+      familiesQuery = familiesQuery.eq("created_by", userId);
+    }
+    const { data: families, error: familiesError } = await familiesQuery.order(
+      "created_at",
+      { ascending: false },
+    );
 
     if (familiesError || !families) {
       setMyFamilies([]);
@@ -167,7 +173,7 @@ export default function Host() {
 
   useEffect(() => {
     if (session?.user?.id) {
-      loadHostData(session.user.id);
+      loadHostData(session.user.id, isAdminEmail(session.user.email));
       refreshCapacity(session.user.id, session.user.email);
     } else {
       setMyFamilies([]);
@@ -177,7 +183,7 @@ export default function Host() {
 
   const refreshHostData = async (userId) => {
     if (!userId) return;
-    await loadHostData(userId);
+    await loadHostData(userId, isAdminEmail(session?.user?.email));
   };
 
   const handleDeleteFamily = async (familyId) => {
@@ -461,7 +467,7 @@ export default function Host() {
     setLoading(true);
     setStatus("Saving changes...");
 
-    const { error } = await supabase
+    let updateQuery = supabase
       .from("families")
       .update({
         service_name: editServiceName.trim(),
@@ -471,8 +477,11 @@ export default function Host() {
         logo_url: editLogoUrl || null,
         group_description: editGroupDescription.trim() || null,
       })
-      .eq("id", family.id)
-      .eq("created_by", session?.user?.id);
+      .eq("id", family.id);
+    if (!isAdminEmail(session?.user?.email)) {
+      updateQuery = updateQuery.eq("created_by", session?.user?.id);
+    }
+    const { error } = await updateQuery;
 
     if (error) {
       console.error("Family update error:", error);
