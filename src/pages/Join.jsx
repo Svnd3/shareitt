@@ -700,21 +700,51 @@ export default function Join() {
                   </button>
                 </div>
               </form>
-              {joined && family.whatsapp_group_link && (
+              {joined && (
                 <div className="mt-6 rounded-3xl border border-saddle-200 bg-saddle-50 p-5 text-sm text-saddle-900">
                   <p className="font-semibold">Next step</p>
-                  <p className="mt-2">
-                    You have been added to the group. Use the WhatsApp group
-                    link below to connect with the host and other members.
-                  </p>
-                  <a
-                    href={family.whatsapp_group_link}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 inline-flex rounded-full bg-[#1A7A3C] px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
-                  >
-                    Open WhatsApp group
-                  </a>
+                  {family.whatsapp_group_link ? (
+                    <>
+                      <p className="mt-2">
+                        You have been added to the group. Use the WhatsApp
+                        group link below to connect with the host and other
+                        members.
+                      </p>
+                      <a
+                        href={family.whatsapp_group_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-4 inline-flex rounded-full bg-[#1A7A3C] px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                      >
+                        Open WhatsApp group
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-2">
+                        You're on the list! The host hasn't shared a WhatsApp
+                        group link yet — message {family.host_name} directly to
+                        get connected and arrange payment.
+                      </p>
+                      {family.host_phone && (
+                        <a
+                          href={`https://wa.me/${family.host_phone.replace(/\D/g, "").replace(/^0/, "254")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-4 inline-flex rounded-full bg-[#1A7A3C] px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                        >
+                          Message {family.host_name} on WhatsApp
+                        </a>
+                      )}
+                      <p className="mt-4 text-xs text-saddle-800">
+                        Host not responding?{" "}
+                        <Link to="/report" className="font-semibold underline">
+                          Report it to ShareIt
+                        </Link>{" "}
+                        and we'll help sort it out.
+                      </p>
+                    </>
+                  )}
 
                   <div className="mt-5 border-t border-saddle-200 pt-4">
                     <p className="text-saddle-800">
