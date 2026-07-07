@@ -16,6 +16,7 @@ import {
 import Home from "./pages/Home";
 import Join from "./pages/Join";
 import Host from "./pages/Host";
+import Account from "./pages/Account";
 import Report from "./pages/Report";
 import Auth from "./pages/Auth";
 import HowItWorksPage from "./pages/HowItWorks";
@@ -441,6 +442,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute authLoading={authLoading} session={session}>
             <Host />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/account"
+        element={
+          <ProtectedRoute authLoading={authLoading} session={session}>
+            <Account session={session} authLoading={authLoading} />
           </ProtectedRoute>
         }
       />

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import SeoHead from "../components/SeoHead";
+import Header from "../components/Header";
 import {
   sendHostRegistrationEmail,
   sendMemberRemovedEmail,
@@ -687,6 +688,9 @@ export default function Host() {
     return (
       <main className="min-h-screen bg-[#F8F9FA] px-4 py-12 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
         <SeoHead title="Host a Group" path="/host" noindex />
+        <div className="mx-auto max-w-3xl">
+          <Header session={session} authLoading={authLoading} />
+        </div>
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-3xl font-semibold text-slate-950">
             Sign in to host
@@ -730,6 +734,7 @@ export default function Host() {
         />
       )}
       <div className="mx-auto max-w-3xl space-y-8">
+        <Header session={session} authLoading={authLoading} />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"

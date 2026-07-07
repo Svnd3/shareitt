@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   supabase,
   hasSupabaseConfig,
@@ -10,7 +10,7 @@ import { useToast } from "../components/ToastProvider";
 import ServiceCard from "../components/ServiceCard";
 import FAQ from "../components/FAQ";
 import LoadingSpinner from "../components/LoadingSpinner";
-import ShareItLogo from "../assets/shareitlogo.webp";
+import Header from "../components/Header";
 import SpotifyImg from "../assets/spotify.webp";
 import NetflixImg from "../assets/netflix.webp";
 import ChatGPTImg from "../assets/chatgpt.webp";
@@ -42,7 +42,6 @@ const slides = [
 
 export default function Home({ session, authLoading }) {
   const toast = useToast();
-  const navigate = useNavigate();
   const location = useLocation();
   const initialService = (() => {
     const params = new URLSearchParams(location.search);
@@ -322,12 +321,6 @@ export default function Home({ session, authLoading }) {
     }
   }, [notice, location.pathname]);
 
-  const handleSignOut = async () => {
-    if (!supabase.auth?.signOut) return;
-    await supabase.auth.signOut();
-    navigate("/");
-  };
-
   const collection = useMemo(() => {
     const filteredByService =
       activeService === "All"
@@ -449,69 +442,28 @@ export default function Home({ session, authLoading }) {
   return (
     <main className="min-h-screen bg-[#F8F9FA]" style={{ touchAction: 'pan-y' }}>
       <div className="mx-auto max-w-screen-xl px-4 pb-32 pt-4 sm:px-6 lg:px-8" style={{ touchAction: 'pan-y' }}>
-        <header className="sticky top-0 z-30 mb-4 bg-[#F8F9FA]">
-          <nav className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <img src={ShareItLogo} alt="ShareIt" className="h-16 w-auto" />
-              <div>
-                <p className="text-sm font-semibold text-slate-950">ShareIt</p>
-                <p className="text-xs text-slate-500">
-                  Kenya subscription sharing made simple
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600">
-              <button
-                type="button"
-                onClick={handleShareApp}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
-                  <path d="M16 6l4 4-4 4" />
-                  <path d="M20 10H8a4 4 0 0 0-4 4v2" />
-                </svg>
-                Share
-              </button>
-              <a href="#faq" className="hover:text-slate-900">
-                FAQ
-              </a>
-              <Link to="/host" className="hover:text-slate-900">
-                Host
-              </Link>
-              <Link to="/report" className="hover:text-slate-900">
-                Report
-              </Link>
-              {authLoading ? (
-                <span className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs text-slate-500">
-                  Checking…
-                </span>
-              ) : session ? (
-                <button
-                  onClick={handleSignOut}
-                  className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-700"
-                >
-                  Sign out
-                </button>
-              ) : (
-                <Link
-                  to="/auth"
-                  className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
-                >
-                  Sign in
-                </Link>
-              )}
-            </div>
-          </nav>
-        </header>
+        <Header session={session} authLoading={authLoading}>
+          <button
+            type="button"
+            onClick={handleShareApp}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+              <path d="M16 6l4 4-4 4" />
+              <path d="M20 10H8a4 4 0 0 0-4 4v2" />
+            </svg>
+            Share
+          </button>
+        </Header>
 
         {!hasSupabaseConfig && (
           <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 shadow-sm">
