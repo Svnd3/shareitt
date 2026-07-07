@@ -8,6 +8,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { supabase } from "./lib/supabaseClient";
+import { initGA, trackPageView } from "./lib/analytics";
 import { friendlyAuthError } from "./lib/authErrors";
 import {
   sendAdminLoginReportEmail,
@@ -87,6 +88,23 @@ function ScrollToTop() {
     }
     window.scrollTo(0, 0);
   }, [pathname]);
+
+  return null;
+}
+
+// Sends a GA4 page_view on every route change — gtag's own automatic
+// page_view only fires once on initial script load, which would miss every
+// subsequent in-app navigation in this single-page app.
+function AnalyticsTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    initGA();
+  }, []);
+
+  useEffect(() => {
+    trackPageView(location.pathname + location.search);
+  }, [location.pathname, location.search]);
 
   return null;
 }
@@ -430,6 +448,7 @@ function AppRoutes() {
   return (
     <>
       <ScrollToTop />
+      <AnalyticsTracker />
       <Routes>
       <Route
         path="/"
