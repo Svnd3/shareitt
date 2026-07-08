@@ -113,6 +113,23 @@ export async function sendHostNewMemberEmail({ familyId, memberName }) {
   });
 }
 
+// Sent to the member themselves when an admin adds them directly (Account.jsx
+// "Add a member directly") rather than them self-joining — the wording
+// reflects that they're already confirmed, not "requested to join" like
+// first_membership_request.
+export async function sendAdminAddedMemberEmail({ email, memberName, family }) {
+  if (!email) return;
+
+  await invokeEmailFunction("admin_added_member", {
+    to: email,
+    member_name: memberName,
+    service_name: family.service_name,
+    host_name: family.host_name,
+    whatsapp_group_link: family.whatsapp_group_link || null,
+    host_phone: family.host_phone || null,
+  });
+}
+
 export async function sendAdminFamilyFullEmail({ family }) {
   await invokeEmailFunction("admin_family_full", {
     service_name: family.service_name,

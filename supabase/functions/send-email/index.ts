@@ -198,6 +198,40 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
         `,
       };
     }
+    case "admin_added_member": {
+      const {
+        to,
+        member_name,
+        service_name,
+        host_name,
+        whatsapp_group_link,
+        host_phone,
+      } = payload as Record<string, unknown>;
+      if (!to || !member_name || !service_name || !host_name) {
+        throw new Error("Missing admin-added member fields.");
+      }
+
+      const nextStep = whatsapp_group_link
+        ? `<p>You can join the WhatsApp group right away: <a href="${String(whatsapp_group_link)}">${String(whatsapp_group_link)}</a></p>`
+        : `<p>${String(host_name)} will reach out to connect you on WhatsApp shortly${
+            host_phone
+              ? ` — you're also welcome to message them directly at ${String(host_phone)}`
+              : ""
+          }.</p>`;
+
+      return {
+        from: "ShareIt <no-reply@shareitt.xyz>",
+        to,
+        subject: `You've been added to ${String(service_name)} on ShareIt`,
+        html: `
+          <p>Hi ${String(member_name)},</p>
+          <p>Good news — our team has added you to the <strong>${String(service_name)}</strong> group hosted by ${String(host_name)} on ShareIt.</p>
+          ${nextStep}
+          <p>Any questions, just reply to this email — we're happy to help.</p>
+          <p>Welcome aboard!</p>
+        `,
+      };
+    }
     case "admin_family_full": {
       const { service_name, host_name, total_slots } = payload as Record<
         string,

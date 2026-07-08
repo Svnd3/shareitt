@@ -12,6 +12,7 @@ import {
 import {
   sendHostNewMemberEmail,
   sendAdminNewMemberEmail,
+  sendAdminAddedMemberEmail,
 } from "../lib/sendEmail";
 import { useToast } from "../components/ToastProvider";
 import Header from "../components/Header";
@@ -515,9 +516,20 @@ export default function Account({ session, authLoading }) {
     }).catch((error) => {
       console.error("Admin new member email failed:", error);
     });
+    if (details.email) {
+      sendAdminAddedMemberEmail({
+        email: details.email,
+        memberName: details.name,
+        family,
+      }).catch((error) => {
+        console.error("Admin-added member email failed:", error);
+      });
+    }
 
     toast.showToast(
-      `${details.name} added — host and admin notified by email.`,
+      details.email
+        ? `${details.name} added — they, the host, and admin were all notified by email.`
+        : `${details.name} added — host and admin notified by email.`,
       "success",
     );
     return { ok: true };
