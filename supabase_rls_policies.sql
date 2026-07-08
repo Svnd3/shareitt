@@ -21,6 +21,24 @@ alter table members enable row level security;
 alter table payments enable row level security;
 alter table escrow_payments enable row level security;
 
+-- ── Realtime ────────────────────────────────────────────────────────────
+-- families was already broadcasting (Join.jsx's live slot-count
+-- subscription depends on it). members is added here too so the admin
+-- "All groups" view and the Account page's hosted/joined lists update
+-- instantly on a join/leave instead of needing a refresh — realtime still
+-- only ever delivers rows a session's RLS policies let it SELECT.
+-- ALTER PUBLICATION ... ADD TABLE errors if the table is already a member,
+-- so this is guarded to stay idempotent like the rest of this file.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'members'
+  ) then
+    alter publication supabase_realtime add table members;
+  end if;
+end $$;
+
 -- ── families ────────────────────────────────────────────────────────────
 -- Anyone (including signed-out visitors) can browse listings — this is the
 -- core "marketplace" feature of the app.

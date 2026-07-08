@@ -276,7 +276,9 @@ export default function Account({ session, authLoading }) {
   const [verifiedFilter, setVerifiedFilter] = useState("All");
   const [linkFilter, setLinkFilter] = useState("All");
   const [slotsFilter, setSlotsFilter] = useState("All");
-  const [originFilter, setOriginFilter] = useState("All");
+  // Defaults to "Real" — the launch-time seed listings (no created_by) are
+  // noise for day-to-day admin work; "All"/"Seed" stay one click away.
+  const [originFilter, setOriginFilter] = useState("Real");
   const [groupSort, setGroupSort] = useState("Newest");
 
   const userId = session?.user?.id;
@@ -338,6 +340,105 @@ export default function Account({ session, authLoading }) {
       cancelled = true;
     };
   }, [admin]);
+
+  // Keeps every group/member list on this page live — a new listing, a
+  // slot filling up, or someone joining/leaving shows up immediately
+  // without a refresh, same as the live slot-count subscription on
+  // Join.jsx. Realtime only ever delivers rows the session's own RLS
+  // policies allow it to see, so non-admins naturally only get updates
+  // for their own hosted/joined groups, not the whole marketplace.
+  useEffect(() => {
+    if (!supabase.channel) return;
+
+    const patchFamily = (list, family) =>
+      list.map((f) => (f.id === family.id ? { ...f, ...family } : f));
+    const removeFamily = (list, id) => list.filter((f) => f.id !== id);
+
+    const familiesChannel = supabase
+      .channel("account-families-changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "families" },
+        (payload) => {
+          const family = payload.new;
+          if (admin) setAllGroups((current) => [family, ...current]);
+          if (family.created_by === userId) {
+            setHostedFamilies((current) => [family, ...current]);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "families" },
+        (payload) => {
+          const family = payload.new;
+          setAllGroups((current) =>
+            admin ? patchFamily(current, family) : current,
+          );
+          setHostedFamilies((current) => patchFamily(current, family));
+          setJoinedFamilies((current) => patchFamily(current, family));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "families" },
+        (payload) => {
+          const id = payload.old.id;
+          setAllGroups((current) => removeFamily(current, id));
+          setHostedFamilies((current) => removeFamily(current, id));
+          setJoinedFamilies((current) => removeFamily(current, id));
+        },
+      )
+      .subscribe();
+
+    const membersChannel = supabase
+      .channel("account-members-changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "members" },
+        (payload) => {
+          const member = payload.new;
+          if (admin) {
+            setAllGroupsMembers((current) => ({
+              ...current,
+              [member.family_id]: [
+                ...(current[member.family_id] || []),
+                member,
+              ],
+            }));
+          }
+          if (member.user_id && member.user_id === userId) {
+            fetchJoinedFamilies(userId).then(setJoinedFamilies);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "members" },
+        (payload) => {
+          const member = payload.old;
+          if (admin) {
+            setAllGroupsMembers((current) => ({
+              ...current,
+              [member.family_id]: (current[member.family_id] || []).filter(
+                (m) => m.id !== member.id,
+              ),
+            }));
+          }
+          if (member.user_id && member.user_id === userId) {
+            setJoinedFamilies((current) =>
+              current.filter((f) => f.id !== member.family_id),
+            );
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(familiesChannel);
+      supabase.removeChannel(membersChannel);
+    };
+  }, [admin, userId]);
 
   const handleLeave = async (family) => {
     if (
