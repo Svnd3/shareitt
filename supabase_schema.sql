@@ -122,6 +122,14 @@ create table payment_grants (
   created_at timestamp default now()
 );
 
+-- MIGRATION: run this once against an existing database to support
+-- Unlimited-plan expiry reminder emails (see
+-- supabase/functions/subscription-reminders). Each column records when that
+-- threshold's reminder was sent for a grant, so the daily cron run never
+-- double-emails the same person.
+alter table payment_grants add column if not exists reminder_5day_sent_at timestamptz;
+alter table payment_grants add column if not exists reminder_3day_sent_at timestamptz;
+
 -- ─────────────────────────────────────────────────────────────────────────
 -- Automatic emails setup (one-time, manual dashboard steps)
 --
@@ -134,4 +142,40 @@ create table payment_grants (
 --    - Type: Supabase Edge Functions -> escrow-payment-confirmed
 --    This sends a "payment confirmed" email to the joiner whenever staff set
 --    escrow_payments.payment_confirmed = true.
+-- ─────────────────────────────────────────────────────────────────────────
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- Unlimited-plan expiry reminders (one-time, manual dashboard/SQL steps)
+--
+-- 1. Deploy the edge function: `supabase functions deploy subscription-reminders`.
+--    It uses the RESEND_API_KEY secret (already configured for send-email)
+--    plus the auto-injected SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY.
+-- 2. In the Supabase SQL Editor, enable pg_cron/pg_net (Database ->
+--    Extensions, or just run the two `create extension` lines below) and
+--    schedule a daily call to the function. Replace <project-ref> and
+--    <service-role-key> with your project's values (Settings -> API):
+--
+--    create extension if not exists pg_cron with schema extensions;
+--    create extension if not exists pg_net with schema extensions;
+--
+--    select cron.schedule(
+--      'subscription-expiry-reminders',
+--      '0 8 * * *', -- daily at 08:00 UTC
+--      $$
+--      select net.http_post(
+--        url := 'https://<project-ref>.supabase.co/functions/v1/subscription-reminders',
+--        headers := jsonb_build_object(
+--          'Authorization', 'Bearer <service-role-key>',
+--          'Content-Type', 'application/json'
+--        ),
+--        body := '{}'::jsonb
+--      );
+--      $$
+--    );
+--
+--    This emails every Unlimited-plan holder once when their plan has 5 days
+--    left, and once more at 3 days left (see reminder_5day_sent_at /
+--    reminder_3day_sent_at above — each threshold only ever fires once per
+--    grant, so a missed cron run just catches up the next day instead of
+--    double-sending).
 -- ─────────────────────────────────────────────────────────────────────────
