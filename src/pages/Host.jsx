@@ -94,7 +94,8 @@ export default function Host() {
       .from("families")
       .select(
         "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,logo_url,unique_name,group_description,created_by,created_at",
-      );
+      )
+      .is("deleted_at", null);
     if (!isAdmin) {
       familiesQuery = familiesQuery.eq("created_by", userId);
     }
@@ -118,7 +119,8 @@ export default function Host() {
       const { data: membersData } = await supabase
         .from("members")
         .select("*")
-        .in("family_id", familyIds);
+        .in("family_id", familyIds)
+        .is("deleted_at", null);
 
       const map = (membersData || []).reduce((acc, member) => {
         acc[member.family_id] = [...(acc[member.family_id] || []), member];
@@ -132,15 +134,16 @@ export default function Host() {
     const { data: joinedData, error: joinedError } = await supabase
       .from("members")
       .select(
-        "family_id, families(id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,logo_url,created_by,created_at)",
+        "family_id, families(id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,logo_url,created_by,created_at,deleted_at)",
       )
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .is("deleted_at", null);
 
     if (!joinedError && joinedData) {
       setJoinedFamilies(
         joinedData
           .map((row) => row.families)
-          .filter((family) => family != null),
+          .filter((family) => family && !family.deleted_at),
       );
     } else {
       setJoinedFamilies([]);
@@ -195,7 +198,7 @@ export default function Host() {
   const handleDeleteFamily = async (familyId) => {
     if (
       !window.confirm(
-        "Delete this group and all its members? This cannot be undone.",
+        "Delete this group? Its members are kept, and an admin can restore it later if this was a mistake.",
       )
     ) {
       return;
@@ -204,23 +207,17 @@ export default function Host() {
     setStatus("Removing group listing...");
     setLoading(true);
 
-    const { error: membersError } = await supabase
-      .from("members")
-      .delete()
-      .eq("family_id", familyId);
-
-    if (membersError) {
-      console.error("Members deletion error:", membersError);
-      setStatus("Unable to delete group members. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    const { error, data } = await supabase
+    // Soft delete — the row (and its members) stay in the database with
+    // deleted_at set, so an admin can restore it from the "Deleted" panel
+    // on /account instead of the group being gone for good.
+    let deleteQuery = supabase
       .from("families")
-      .delete()
-      .eq("id", familyId)
-      .eq("created_by", session?.user?.id);
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", familyId);
+    if (!isAdminEmail(session?.user?.email)) {
+      deleteQuery = deleteQuery.eq("created_by", session?.user?.id);
+    }
+    const { error } = await deleteQuery;
 
     if (error) {
       console.error("Family deletion error:", error);
@@ -228,8 +225,6 @@ export default function Host() {
       setLoading(false);
       return;
     }
-
-    console.log("Family deletion response:", data);
 
     if (session?.user?.id) {
       await refreshHostData(session.user.id);
@@ -275,9 +270,11 @@ export default function Host() {
       (member) => member.id === memberId,
     );
 
+    // Soft delete — restorable from the admin "Deleted" panel on /account,
+    // same as a deleted group.
     const { error } = await supabase
       .from("members")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", memberId);
     if (error) {
       setStatus("Unable to remove this member. Please try again.");

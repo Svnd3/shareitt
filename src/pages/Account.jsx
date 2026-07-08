@@ -8,11 +8,14 @@ import {
   fetchJoinedFamilies,
   fetchAllFamilies,
   fetchMembersByFamilyIds,
+  fetchDeletedFamilies,
+  fetchDeletedMembersByFamilyIds,
 } from "../lib/familyData";
 import {
   sendHostNewMemberEmail,
   sendAdminNewMemberEmail,
   sendAdminAddedMemberEmail,
+  sendMemberRemovedEmail,
 } from "../lib/sendEmail";
 import { useToast } from "../components/ToastProvider";
 import Header from "../components/Header";
@@ -173,7 +176,109 @@ function AddMemberForm({ family, onAdd }) {
   );
 }
 
-function AdminGroupRow({ family, members, expanded, onToggle, onAddMember }) {
+function EditMemberForm({ member, onSave, onCancel }) {
+  const [name, setName] = useState(member.name || "");
+  const [phone, setPhone] = useState(member.phone || "");
+  const [email, setEmail] = useState(member.email || "");
+  const [social1, setSocial1] = useState(member.social_media_1 || "");
+  const [social2, setSocial2] = useState(member.social_media_2 || "");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+
+    if (!name.trim() || !phone.trim()) {
+      setError("Name and phone are required.");
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await onSave({
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim() || null,
+      social_media_1: social1.trim() || null,
+      social_media_2: social2.trim() || null,
+    });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      setError(result.error || "Unable to save changes. Please try again.");
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="mt-2 space-y-2 rounded-xl border border-slate-200 bg-white p-3"
+    >
+      <div className="grid gap-2 sm:grid-cols-2">
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Full name"
+          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+        <input
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
+          placeholder="Phone number"
+          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+        <input
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="Email (optional)"
+          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+        <input
+          value={social1}
+          onChange={(event) => setSocial1(event.target.value)}
+          placeholder="Social media 1 (optional)"
+          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+        <input
+          value={social2}
+          onChange={(event) => setSocial2(event.target.value)}
+          placeholder="Social media 2 (optional)"
+          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+      </div>
+      {error && <p className="text-xs text-rose-600">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded-full bg-[#1A7A3C] px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50"
+        >
+          {submitting ? "Saving…" : "Save changes"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function AdminGroupRow({
+  family,
+  members,
+  expanded,
+  onToggle,
+  onAddMember,
+  onEditMember,
+  onRemoveMember,
+  onDeleteFamily,
+}) {
+  const [editingMemberId, setEditingMemberId] = useState(null);
   const slotsLeft = family.total_slots - family.filled_slots;
   const isSeed = !family.created_by;
 
@@ -214,13 +319,22 @@ function AdminGroupRow({ family, members, expanded, onToggle, onAddMember }) {
             )}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-slate-100"
-        >
-          {expanded ? "Hide members" : `View members (${members.length})`}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onToggle}
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-slate-100"
+          >
+            {expanded ? "Hide members" : `View members (${members.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => onDeleteFamily(family)}
+            className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+          >
+            Delete group
+          </button>
+        </div>
       </div>
 
       {expanded && (
@@ -228,22 +342,53 @@ function AdminGroupRow({ family, members, expanded, onToggle, onAddMember }) {
           {members.length === 0 ? (
             <p className="text-sm text-slate-500">No members have joined yet.</p>
           ) : (
-            members.map((member) => (
-              <div
-                key={member.id}
-                className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700"
-              >
-                <p className="font-semibold text-slate-950">{member.name}</p>
-                <p>{member.phone}{member.email ? ` · ${member.email}` : ""}</p>
-                {(member.social_media_1 || member.social_media_2) && (
-                  <p className="text-slate-500">
-                    {[member.social_media_1, member.social_media_2]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                )}
-              </div>
-            ))
+            members.map((member) =>
+              editingMemberId === member.id ? (
+                <EditMemberForm
+                  key={member.id}
+                  member={member}
+                  onCancel={() => setEditingMemberId(null)}
+                  onSave={async (details) => {
+                    const result = await onEditMember(family, member, details);
+                    if (result.ok) setEditingMemberId(null);
+                    return result;
+                  }}
+                />
+              ) : (
+                <div
+                  key={member.id}
+                  className="flex flex-col gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700 sm:flex-row sm:items-start sm:justify-between"
+                >
+                  <div>
+                    <p className="font-semibold text-slate-950">{member.name}</p>
+                    <p>{member.phone}{member.email ? ` · ${member.email}` : ""}</p>
+                    {(member.social_media_1 || member.social_media_2) && (
+                      <p className="text-slate-500">
+                        {[member.social_media_1, member.social_media_2]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingMemberId(member.id)}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-slate-100"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveMember(family, member)}
+                      className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ),
+            )
           )}
           <AddMemberForm
             family={family}
@@ -251,6 +396,89 @@ function AdminGroupRow({ family, members, expanded, onToggle, onAddMember }) {
           />
         </div>
       )}
+    </div>
+  );
+}
+
+function DeletedGroupRow({ family, members, onRestoreFamily, onRestoreMember }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 opacity-90">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold text-slate-950">{family.service_name}</p>
+          <p className="text-sm text-slate-600">
+            Hosted by {family.host_name || "Unknown"} · deleted{" "}
+            {new Date(family.deleted_at).toLocaleString("en-KE")}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onRestoreFamily(family)}
+          className="rounded-full bg-[#1A7A3C] px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600"
+        >
+          Restore group
+        </button>
+      </div>
+      {members.length > 0 && (
+        <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Removed members
+          </p>
+          {members.map((member) => (
+            <div
+              key={member.id}
+              className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700"
+            >
+              <div>
+                <p className="font-semibold text-slate-950">{member.name}</p>
+                <p>{member.phone}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onRestoreMember(family, member)}
+                className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-slate-100"
+              >
+                Restore
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrphanedDeletedMembers({ members, family, onRestoreMember }) {
+  if (members.length === 0 || !family) return null;
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <p className="font-semibold text-slate-950">
+        {family?.service_name || "Unknown group"}
+      </p>
+      <p className="text-sm text-slate-600">
+        Hosted by {family?.host_name || "Unknown"} — group is still active,
+        these members were removed from it
+      </p>
+      <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+        {members.map((member) => (
+          <div
+            key={member.id}
+            className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700"
+          >
+            <div>
+              <p className="font-semibold text-slate-950">{member.name}</p>
+              <p>{member.phone}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onRestoreMember(family, member)}
+              className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-slate-100"
+            >
+              Restore
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -281,6 +509,10 @@ export default function Account({ session, authLoading }) {
   // noise for day-to-day admin work; "All"/"Seed" stay one click away.
   const [originFilter, setOriginFilter] = useState("Real");
   const [groupSort, setGroupSort] = useState("Newest");
+  const [deletedGroups, setDeletedGroups] = useState([]);
+  const [deletedGroupsMembers, setDeletedGroupsMembers] = useState({});
+  const [orphanedDeletedMembers, setOrphanedDeletedMembers] = useState({});
+  const [trashLoading, setTrashLoading] = useState(true);
 
   const userId = session?.user?.id;
   const email = session?.user?.email;
@@ -342,6 +574,58 @@ export default function Account({ session, authLoading }) {
     };
   }, [admin]);
 
+  // The "Deleted" trash panel — soft-deleted families, plus soft-deleted
+  // members split into two buckets: ones whose family was deleted along
+  // with them (grouped under that family in the trash list) vs. ones whose
+  // family is still active (a host/admin removed just that member —
+  // "orphaned" relative to the trash list, shown separately since their
+  // group isn't itself deleted).
+  useEffect(() => {
+    if (!admin) {
+      setTrashLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const loadTrash = async () => {
+      setTrashLoading(true);
+      const [activeFamilies, deletedFamilies] = await Promise.all([
+        fetchAllFamilies(),
+        fetchDeletedFamilies(),
+      ]);
+      if (cancelled) return;
+      setDeletedGroups(deletedFamilies);
+
+      const allFamilyIds = [
+        ...activeFamilies.map((f) => f.id),
+        ...deletedFamilies.map((f) => f.id),
+      ];
+      const deletedMembersMap = await fetchDeletedMembersByFamilyIds(
+        allFamilyIds,
+      );
+      if (cancelled) return;
+
+      const deletedFamilyIds = new Set(deletedFamilies.map((f) => f.id));
+      const inDeletedFamily = {};
+      const orphaned = {};
+      for (const [familyId, members] of Object.entries(deletedMembersMap)) {
+        if (deletedFamilyIds.has(familyId)) {
+          inDeletedFamily[familyId] = members;
+        } else {
+          orphaned[familyId] = members;
+        }
+      }
+      setDeletedGroupsMembers(inDeletedFamily);
+      setOrphanedDeletedMembers(orphaned);
+      setTrashLoading(false);
+    };
+
+    loadTrash();
+    return () => {
+      cancelled = true;
+    };
+  }, [admin]);
+
   // Keeps every group/member list on this page live — a new listing, a
   // slot filling up, or someone joining/leaving shows up immediately
   // without a refresh, same as the live slot-count subscription on
@@ -373,6 +657,18 @@ export default function Account({ session, authLoading }) {
         { event: "UPDATE", schema: "public", table: "families" },
         (payload) => {
           const family = payload.new;
+          // A soft-delete is a families UPDATE (deleted_at set), not a real
+          // DELETE — drop it from the hosted/joined lists the same way a
+          // hard delete would, instead of silently merging in a stale
+          // deleted_at and leaving the card showing.
+          if (family.deleted_at) {
+            setAllGroups((current) =>
+              admin ? removeFamily(current, family.id) : current,
+            );
+            setHostedFamilies((current) => removeFamily(current, family.id));
+            setJoinedFamilies((current) => removeFamily(current, family.id));
+            return;
+          }
           setAllGroups((current) =>
             admin ? patchFamily(current, family) : current,
           );
@@ -533,6 +829,217 @@ export default function Account({ session, authLoading }) {
       "success",
     );
     return { ok: true };
+  };
+
+  const handleEditMember = async (family, member, details) => {
+    const { data: updated, error } = await supabase
+      .from("members")
+      .update(details)
+      .eq("id", member.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Edit member error:", error);
+      return { ok: false, error: error.message };
+    }
+
+    setAllGroupsMembers((current) => ({
+      ...current,
+      [family.id]: (current[family.id] || []).map((m) =>
+        m.id === member.id ? updated : m,
+      ),
+    }));
+
+    toast.showToast(`${updated.name}'s details updated.`, "success");
+    return { ok: true };
+  };
+
+  const handleRemoveMemberAdmin = async (family, member) => {
+    if (
+      !window.confirm(
+        `Remove ${member.name} from ${family.service_name}? This can be restored from the Deleted panel.`,
+      )
+    ) {
+      return;
+    }
+
+    const deletedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("members")
+      .update({ deleted_at: deletedAt })
+      .eq("id", member.id);
+    if (error) {
+      console.error("Admin remove member error:", error);
+      toast.showToast("Unable to remove this member. Please try again.", "error");
+      return;
+    }
+
+    await supabase
+      .from("families")
+      .update({ filled_slots: Math.max(0, family.filled_slots - 1) })
+      .eq("id", family.id);
+
+    setAllGroups((current) =>
+      current.map((f) =>
+        f.id === family.id
+          ? { ...f, filled_slots: Math.max(0, f.filled_slots - 1) }
+          : f,
+      ),
+    );
+    setAllGroupsMembers((current) => ({
+      ...current,
+      [family.id]: (current[family.id] || []).filter((m) => m.id !== member.id),
+    }));
+    setOrphanedDeletedMembers((current) => ({
+      ...current,
+      [family.id]: [
+        ...(current[family.id] || []),
+        { ...member, deleted_at: deletedAt },
+      ],
+    }));
+
+    if (member.email) {
+      sendMemberRemovedEmail({
+        email: member.email,
+        memberName: member.name,
+        serviceName: family.service_name,
+        hostName: family.host_name,
+      }).catch((error) => {
+        console.error("Member removed email failed:", error);
+      });
+    }
+
+    toast.showToast(
+      `${member.name} removed — restorable from the Deleted panel.`,
+      "success",
+    );
+  };
+
+  const handleDeleteFamilyAdmin = async (family) => {
+    if (
+      !window.confirm(
+        `Delete "${family.service_name}"? Members are kept, and this can be restored from the Deleted panel.`,
+      )
+    ) {
+      return;
+    }
+
+    const deletedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("families")
+      .update({ deleted_at: deletedAt })
+      .eq("id", family.id);
+    if (error) {
+      console.error("Admin delete family error:", error);
+      toast.showToast("Unable to delete this group. Please try again.", "error");
+      return;
+    }
+
+    setAllGroups((current) => current.filter((f) => f.id !== family.id));
+    setDeletedGroups((current) => [{ ...family, deleted_at: deletedAt }, ...current]);
+    setAllGroupsMembers((current) => {
+      const next = { ...current };
+      delete next[family.id];
+      return next;
+    });
+
+    toast.showToast(
+      `${family.service_name} deleted — restorable from the Deleted panel.`,
+      "success",
+    );
+  };
+
+  const handleRestoreFamily = async (family) => {
+    const { error } = await supabase
+      .from("families")
+      .update({ deleted_at: null })
+      .eq("id", family.id);
+    if (error) {
+      console.error("Restore family error:", error);
+      toast.showToast("Unable to restore this group. Please try again.", "error");
+      return;
+    }
+
+    const movedOutMembers = deletedGroupsMembers[family.id] || [];
+
+    setDeletedGroups((current) => current.filter((f) => f.id !== family.id));
+    setAllGroups((current) => [{ ...family, deleted_at: null }, ...current]);
+    setDeletedGroupsMembers((current) => {
+      const next = { ...current };
+      delete next[family.id];
+      return next;
+    });
+    if (movedOutMembers.length > 0) {
+      setOrphanedDeletedMembers((current) => ({
+        ...current,
+        [family.id]: [...(current[family.id] || []), ...movedOutMembers],
+      }));
+    }
+
+    const membersMap = await fetchMembersByFamilyIds([family.id]);
+    setAllGroupsMembers((current) => ({
+      ...current,
+      [family.id]: membersMap[family.id] || [],
+    }));
+
+    toast.showToast(`${family.service_name} restored.`, "success");
+  };
+
+  const handleRestoreMember = async (family, member) => {
+    const { error } = await supabase
+      .from("members")
+      .update({ deleted_at: null })
+      .eq("id", member.id);
+    if (error) {
+      console.error("Restore member error:", error);
+      toast.showToast("Unable to restore this member. Please try again.", "error");
+      return;
+    }
+
+    const { error: incrementError } = await supabase.rpc(
+      "increment_family_slot",
+      { p_family_id: family.id },
+    );
+    if (incrementError) {
+      console.error("Increment family slot on restore failed:", incrementError);
+    }
+
+    const restoredMember = { ...member, deleted_at: null };
+
+    setDeletedGroupsMembers((current) => ({
+      ...current,
+      [family.id]: (current[family.id] || []).filter((m) => m.id !== member.id),
+    }));
+    setOrphanedDeletedMembers((current) => ({
+      ...current,
+      [family.id]: (current[family.id] || []).filter((m) => m.id !== member.id),
+    }));
+
+    const familyIsActive = allGroups.some((f) => f.id === family.id);
+    if (familyIsActive) {
+      setAllGroupsMembers((current) => ({
+        ...current,
+        [family.id]: [...(current[family.id] || []), restoredMember],
+      }));
+      setAllGroups((current) =>
+        current.map((f) =>
+          f.id === family.id
+            ? { ...f, filled_slots: Math.min(f.total_slots, f.filled_slots + 1) }
+            : f,
+        ),
+      );
+    } else {
+      setDeletedGroups((current) =>
+        current.map((f) =>
+          f.id === family.id
+            ? { ...f, filled_slots: Math.min(f.total_slots, f.filled_slots + 1) }
+            : f,
+        ),
+      );
+    }
+
+    toast.showToast(`${member.name} restored.`, "success");
   };
 
   const handleSignOut = async () => {
@@ -820,8 +1327,52 @@ export default function Account({ session, authLoading }) {
                         )
                       }
                       onAddMember={handleAdminAddMember}
+                      onEditMember={handleEditMember}
+                      onRemoveMember={handleRemoveMemberAdmin}
+                      onDeleteFamily={handleDeleteFamilyAdmin}
                     />
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {admin && (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+              <h2 className="text-xl font-semibold text-slate-950">
+                Deleted (admin)
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Deleted groups and removed members, kept until restored.
+              </p>
+              {trashLoading ? (
+                <p className="mt-4 text-sm text-slate-500">Loading…</p>
+              ) : deletedGroups.length === 0 &&
+                Object.values(orphanedDeletedMembers).every(
+                  (members) => members.length === 0,
+                ) ? (
+                <p className="mt-4 text-sm text-slate-600">Nothing deleted.</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {deletedGroups.map((family) => (
+                    <DeletedGroupRow
+                      key={family.id}
+                      family={family}
+                      members={deletedGroupsMembers[family.id] || []}
+                      onRestoreFamily={handleRestoreFamily}
+                      onRestoreMember={handleRestoreMember}
+                    />
+                  ))}
+                  {Object.entries(orphanedDeletedMembers)
+                    .filter(([, members]) => members.length > 0)
+                    .map(([familyId, members]) => (
+                      <OrphanedDeletedMembers
+                        key={familyId}
+                        family={allGroups.find((f) => f.id === familyId)}
+                        members={members}
+                        onRestoreMember={handleRestoreMember}
+                      />
+                    ))}
                 </div>
               )}
             </div>

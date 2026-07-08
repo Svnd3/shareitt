@@ -73,6 +73,7 @@ export default function Join() {
           select:
             "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,hosting_method,logo_url,group_description,created_by,created_at",
           id: `eq.${familyId}`,
+          deleted_at: "is.null",
         });
         const response = await fetch(
           `${supabaseUrl}/rest/v1/families?${params.toString()}`,
@@ -275,6 +276,7 @@ export default function Join() {
       .select("id")
       .eq("family_id", family.id)
       .eq("user_id", session?.user?.id)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (existingError) {

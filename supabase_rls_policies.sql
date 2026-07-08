@@ -15,6 +15,23 @@
 -- never added to the schema — add it so the host "custom link" feature works.
 alter table families add column if not exists unique_name text unique;
 
+-- ── Soft delete ─────────────────────────────────────────────────────────
+-- Deleting a family or a member used to be a real DELETE — unrecoverable.
+-- Both tables get a deleted_at marker instead: the app's delete actions
+-- (Host.jsx handleDeleteFamily/handleRemoveMember, the admin panel in
+-- Account.jsx) now set this instead of removing the row, everyday reads
+-- (Home.jsx, Join.jsx, familyData.js, Host.jsx) filter deleted_at is null,
+-- and the admin "Deleted" view queries deleted_at is not null with a
+-- Restore action that just clears it back to null.
+alter table families add column if not exists deleted_at timestamptz;
+alter table members add column if not exists deleted_at timestamptz;
+
+-- New columns don't inherit existing column-level SELECT grants (see the
+-- logo_url/group_description gotcha further down this file) — without this,
+-- any select() that lists deleted_at 401s the whole query.
+grant select (deleted_at) on public.families to anon, authenticated;
+grant select (deleted_at) on public.members to anon, authenticated;
+
 -- ── Enable RLS on every table ──────────────────────────────────────────────
 alter table families enable row level security;
 alter table members enable row level security;
@@ -70,11 +87,18 @@ create policy "families_update_own"
     or auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
   );
 
+-- The app itself never issues a real DELETE anymore (Host.jsx/Account.jsx
+-- soft-delete via families_update_own instead, so it's restorable) — this
+-- stays for a genuine permanent purge from the SQL editor/dashboard if one
+-- is ever needed (e.g. a GDPR erasure request), now including admins.
 drop policy if exists "families_delete_own" on families;
 create policy "families_delete_own"
   on families for delete
   to authenticated
-  using (created_by = auth.uid());
+  using (
+    created_by = auth.uid()
+    or auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
+  );
 
 -- ── members ─────────────────────────────────────────────────────────────
 -- A member's PII (phone, email, social handles) is visible only to:
@@ -111,20 +135,46 @@ create policy "members_insert_own"
     or auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
   );
 
--- Only the host of the family can remove a member.
+-- The app soft-deletes members too (see families_delete_own above) — this
+-- stays as the real-DELETE fallback for the host, now also admins.
 drop policy if exists "members_delete_host" on members;
 create policy "members_delete_host"
   on members for delete
   to authenticated
   using (
-    exists (
+    auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
+    or exists (
       select 1 from families f
       where f.id = members.family_id
         and f.created_by = auth.uid()
     )
   );
 
--- No update policy: membership rows are immutable once created.
+-- Lets the host of a family (to fix a typo'd phone/name, or soft-delete via
+-- deleted_at) or an admin (editing any member's details, same allowlist as
+-- families_update_own) update a membership row. Previously there was no
+-- update policy at all, so a member's details were immutable once created
+-- and nobody could soft-delete/restore one without a raw SQL statement.
+drop policy if exists "members_update_host_or_admin" on members;
+create policy "members_update_host_or_admin"
+  on members for update
+  to authenticated
+  using (
+    auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
+    or exists (
+      select 1 from families f
+      where f.id = members.family_id
+        and f.created_by = auth.uid()
+    )
+  )
+  with check (
+    auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
+    or exists (
+      select 1 from families f
+      where f.id = members.family_id
+        and f.created_by = auth.uid()
+    )
+  );
 
 -- ── payments ────────────────────────────────────────────────────────────
 -- Users can see and create only their own payment records. Confirming a

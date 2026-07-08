@@ -188,6 +188,7 @@ export default function Home({ session, authLoading }) {
           select:
             "id,service_name,host_name,host_phone,price_per_slot,total_slots,filled_slots,is_verified,is_live,whatsapp_group_link,hosting_method,logo_url,unique_name,group_description,created_by,created_at",
           is_live: "eq.true",
+          deleted_at: "is.null",
           order: "created_at.desc",
         });
         const response = await fetch(
@@ -249,7 +250,7 @@ export default function Home({ session, authLoading }) {
               return current.filter((f) => f.id !== payload.old.id);
             }
             const updated = payload.new;
-            if (!updated.is_live) {
+            if (!updated.is_live || updated.deleted_at) {
               return current.filter((f) => f.id !== updated.id);
             }
             const exists = current.some((f) => f.id === updated.id);
@@ -288,6 +289,7 @@ export default function Home({ session, authLoading }) {
         const params = new URLSearchParams({
           select: "family_id",
           user_id: `eq.${userId}`,
+          deleted_at: "is.null",
         });
         const response = await fetch(
           `${supabaseUrl}/rest/v1/members?${params.toString()}`,
