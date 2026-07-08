@@ -3,7 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { isAdminEmail } from "../lib/adminAccess";
 import { getUserCapacity } from "../lib/payments";
-import { fetchHostedFamilies, fetchJoinedFamilies } from "../lib/familyData";
+import {
+  fetchHostedFamilies,
+  fetchJoinedFamilies,
+  fetchAllFamilies,
+  fetchMembersByFamilyIds,
+} from "../lib/familyData";
 import { useToast } from "../components/ToastProvider";
 import Header from "../components/Header";
 import SeoHead from "../components/SeoHead";
@@ -35,6 +40,70 @@ function GroupRow({ family, action }) {
   );
 }
 
+function AdminGroupRow({ family, members, expanded, onToggle }) {
+  const slotsLeft = family.total_slots - family.filled_slots;
+  const isSeed = !family.created_by;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold text-slate-950">
+            {family.service_name}
+            {isSeed && (
+              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                Seed listing
+              </span>
+            )}
+          </p>
+          <p className="text-sm text-slate-600">
+            Hosted by {family.host_name || "Unknown"} · {family.host_phone || "no phone on file"}
+          </p>
+          <p className="text-sm text-slate-600">
+            {family.filled_slots}/{family.total_slots} slots filled
+            {slotsLeft > 0 ? ` — ${slotsLeft} left` : " — full"}
+            {!family.is_live && " — Offline"}
+            {!family.is_verified && " — Pending review"}
+            {!family.whatsapp_group_link && " — No WhatsApp link set"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-slate-100"
+        >
+          {expanded ? "Hide members" : `View members (${members.length})`}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
+          {members.length === 0 ? (
+            <p className="text-sm text-slate-500">No members have joined yet.</p>
+          ) : (
+            members.map((member) => (
+              <div
+                key={member.id}
+                className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700"
+              >
+                <p className="font-semibold text-slate-950">{member.name}</p>
+                <p>{member.phone}{member.email ? ` · ${member.email}` : ""}</p>
+                {(member.social_media_1 || member.social_media_2) && (
+                  <p className="text-slate-500">
+                    {[member.social_media_1, member.social_media_2]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Account({ session, authLoading }) {
   const navigate = useNavigate();
   const toast = useToast();
@@ -47,9 +116,14 @@ export default function Account({ session, authLoading }) {
   });
   const [dataLoading, setDataLoading] = useState(true);
   const [leavingId, setLeavingId] = useState(null);
+  const [allGroups, setAllGroups] = useState([]);
+  const [allGroupsMembers, setAllGroupsMembers] = useState({});
+  const [allGroupsLoading, setAllGroupsLoading] = useState(true);
+  const [expandedGroupId, setExpandedGroupId] = useState(null);
 
   const userId = session?.user?.id;
   const email = session?.user?.email;
+  const admin = isAdminEmail(email);
 
   useEffect(() => {
     if (!userId) {
@@ -77,6 +151,35 @@ export default function Account({ session, authLoading }) {
       cancelled = true;
     };
   }, [userId, email]);
+
+  // Every group ever formed on ShareIt — admin-only, relies on the RLS
+  // carve-out in supabase_rls_policies.sql (families_update_own /
+  // members_select_own_or_host), not just a client-side check.
+  useEffect(() => {
+    if (!admin) {
+      setAllGroupsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const loadAll = async () => {
+      setAllGroupsLoading(true);
+      const families = await fetchAllFamilies();
+      if (cancelled) return;
+      setAllGroups(families);
+      const membersMap = await fetchMembersByFamilyIds(
+        families.map((family) => family.id),
+      );
+      if (cancelled) return;
+      setAllGroupsMembers(membersMap);
+      setAllGroupsLoading(false);
+    };
+
+    loadAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [admin]);
 
   const handleLeave = async (family) => {
     if (
@@ -120,8 +223,6 @@ export default function Account({ session, authLoading }) {
         day: "numeric",
       })
     : null;
-
-  const admin = isAdminEmail(email);
 
   return (
     <main className="min-h-screen bg-[#F8F9FA] px-4 py-4 sm:px-6 lg:px-8" style={{ touchAction: "pan-y" }}>
@@ -246,6 +347,38 @@ export default function Account({ session, authLoading }) {
               </div>
             )}
           </div>
+
+          {admin && (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+              <h2 className="text-xl font-semibold text-slate-950">
+                All groups (admin)
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Every group ever formed on ShareIt, not just yours.
+              </p>
+              {allGroupsLoading ? (
+                <p className="mt-4 text-sm text-slate-500">Loading…</p>
+              ) : allGroups.length === 0 ? (
+                <p className="mt-4 text-sm text-slate-600">No groups found.</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {allGroups.map((family) => (
+                    <AdminGroupRow
+                      key={family.id}
+                      family={family}
+                      members={allGroupsMembers[family.id] || []}
+                      expanded={expandedGroupId === family.id}
+                      onToggle={() =>
+                        setExpandedGroupId((current) =>
+                          current === family.id ? null : family.id,
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
             <button

@@ -30,3 +30,36 @@ export async function fetchJoinedFamilies(userId) {
   if (error || !data) return [];
   return data.map((row) => row.families).filter(Boolean);
 }
+
+// Every group ever formed on ShareIt, regardless of who hosts it — RLS only
+// lets this actually return every row for the admin accounts in
+// families_update_own/members_select_own_or_host (see
+// supabase_rls_policies.sql); everyone else just gets their own listings
+// back, same as fetchHostedFamilies.
+export async function fetchAllFamilies() {
+  const { data, error } = await supabase
+    .from("families")
+    .select(FAMILY_COLUMNS)
+    .order("created_at", { ascending: false });
+
+  return error || !data ? [] : data;
+}
+
+// Member rows for a set of families, grouped by family_id — used to show
+// each group's real joiners (name, phone, socials) in the admin "All
+// groups" view. Relies on the same admin RLS carve-out as fetchAllFamilies.
+export async function fetchMembersByFamilyIds(familyIds) {
+  if (!familyIds.length) return {};
+
+  const { data, error } = await supabase
+    .from("members")
+    .select("*")
+    .in("family_id", familyIds);
+
+  if (error || !data) return {};
+
+  return data.reduce((acc, member) => {
+    acc[member.family_id] = [...(acc[member.family_id] || []), member];
+    return acc;
+  }, {});
+}
