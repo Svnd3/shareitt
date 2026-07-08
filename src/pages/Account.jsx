@@ -40,6 +40,32 @@ function GroupRow({ family, action }) {
   );
 }
 
+function FilterChips({ label, options, value, onChange }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+      <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+        {label}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {options.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              value === option
+                ? "bg-[#1A7A3C] text-white"
+                : "border border-slate-200 bg-slate-100 text-slate-700"
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AdminGroupRow({ family, members, expanded, onToggle }) {
   const slotsLeft = family.total_slots - family.filled_slots;
   const isSeed = !family.created_by;
@@ -64,7 +90,21 @@ function AdminGroupRow({ family, members, expanded, onToggle }) {
             {slotsLeft > 0 ? ` — ${slotsLeft} left` : " — full"}
             {!family.is_live && " — Offline"}
             {!family.is_verified && " — Pending review"}
-            {!family.whatsapp_group_link && " — No WhatsApp link set"}
+          </p>
+          <p className="text-sm text-slate-600">
+            WhatsApp group:{" "}
+            {family.whatsapp_group_link ? (
+              <a
+                href={family.whatsapp_group_link}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-saddle-600 underline"
+              >
+                {family.whatsapp_group_link}
+              </a>
+            ) : (
+              <span className="font-semibold text-rose-600">Not made yet</span>
+            )}
           </p>
         </div>
         <button
@@ -120,6 +160,14 @@ export default function Account({ session, authLoading }) {
   const [allGroupsMembers, setAllGroupsMembers] = useState({});
   const [allGroupsLoading, setAllGroupsLoading] = useState(true);
   const [expandedGroupId, setExpandedGroupId] = useState(null);
+  const [groupSearch, setGroupSearch] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("All");
+  const [liveFilter, setLiveFilter] = useState("All");
+  const [verifiedFilter, setVerifiedFilter] = useState("All");
+  const [linkFilter, setLinkFilter] = useState("All");
+  const [slotsFilter, setSlotsFilter] = useState("All");
+  const [originFilter, setOriginFilter] = useState("All");
+  const [groupSort, setGroupSort] = useState("Newest");
 
   const userId = session?.user?.id;
   const email = session?.user?.email;
@@ -215,6 +263,53 @@ export default function Account({ session, authLoading }) {
   if (authLoading) {
     return <LoadingSpinner message="Checking your sign-in status…" />;
   }
+
+  const serviceOptions = [
+    "All",
+    ...Array.from(new Set(allGroups.map((f) => f.service_name))).sort(),
+  ];
+
+  const search = groupSearch.trim().toLowerCase();
+  const filteredGroups = allGroups
+    .filter((f) => {
+      if (
+        search &&
+        !`${f.service_name} ${f.host_name} ${f.host_phone}`
+          .toLowerCase()
+          .includes(search)
+      )
+        return false;
+      if (serviceFilter !== "All" && f.service_name !== serviceFilter)
+        return false;
+      if (liveFilter === "Live" && !f.is_live) return false;
+      if (liveFilter === "Offline" && f.is_live) return false;
+      if (verifiedFilter === "Verified" && !f.is_verified) return false;
+      if (verifiedFilter === "Pending" && f.is_verified) return false;
+      if (linkFilter === "Has link" && !f.whatsapp_group_link) return false;
+      if (linkFilter === "Not made yet" && f.whatsapp_group_link) return false;
+      if (slotsFilter === "Full" && f.filled_slots < f.total_slots)
+        return false;
+      if (slotsFilter === "Open slots" && f.filled_slots >= f.total_slots)
+        return false;
+      if (originFilter === "Real" && !f.created_by) return false;
+      if (originFilter === "Seed" && f.created_by) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      switch (groupSort) {
+        case "Oldest":
+          return new Date(a.created_at) - new Date(b.created_at);
+        case "Most slots left":
+          return (
+            b.total_slots - b.filled_slots - (a.total_slots - a.filled_slots)
+          );
+        case "Most filled":
+          return b.filled_slots - a.filled_slots;
+        case "Newest":
+        default:
+          return new Date(b.created_at) - new Date(a.created_at);
+      }
+    });
 
   const memberSince = session?.user?.created_at
     ? new Date(session.user.created_at).toLocaleDateString("en-KE", {
@@ -356,13 +451,83 @@ export default function Account({ session, authLoading }) {
               <p className="mt-1 text-sm text-slate-600">
                 Every group ever formed on ShareIt, not just yours.
               </p>
+
+              {!allGroupsLoading && allGroups.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <input
+                    type="text"
+                    value={groupSearch}
+                    onChange={(event) => setGroupSearch(event.target.value)}
+                    placeholder="Search by service, host name, or phone…"
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <FilterChips
+                      label="Service"
+                      options={serviceOptions}
+                      value={serviceFilter}
+                      onChange={setServiceFilter}
+                    />
+                    <FilterChips
+                      label="Status"
+                      options={["All", "Live", "Offline"]}
+                      value={liveFilter}
+                      onChange={setLiveFilter}
+                    />
+                    <FilterChips
+                      label="Verification"
+                      options={["All", "Verified", "Pending"]}
+                      value={verifiedFilter}
+                      onChange={setVerifiedFilter}
+                    />
+                    <FilterChips
+                      label="WhatsApp link"
+                      options={["All", "Has link", "Not made yet"]}
+                      value={linkFilter}
+                      onChange={setLinkFilter}
+                    />
+                    <FilterChips
+                      label="Slots"
+                      options={["All", "Full", "Open slots"]}
+                      value={slotsFilter}
+                      onChange={setSlotsFilter}
+                    />
+                    <FilterChips
+                      label="Listing type"
+                      options={["All", "Real", "Seed"]}
+                      value={originFilter}
+                      onChange={setOriginFilter}
+                    />
+                    <FilterChips
+                      label="Sort by"
+                      options={[
+                        "Newest",
+                        "Oldest",
+                        "Most slots left",
+                        "Most filled",
+                      ]}
+                      value={groupSort}
+                      onChange={setGroupSort}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Showing {filteredGroups.length} of {allGroups.length}{" "}
+                    groups
+                  </p>
+                </div>
+              )}
+
               {allGroupsLoading ? (
                 <p className="mt-4 text-sm text-slate-500">Loading…</p>
               ) : allGroups.length === 0 ? (
                 <p className="mt-4 text-sm text-slate-600">No groups found.</p>
+              ) : filteredGroups.length === 0 ? (
+                <p className="mt-4 text-sm text-slate-600">
+                  No groups match these filters.
+                </p>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {allGroups.map((family) => (
+                  {filteredGroups.map((family) => (
                     <AdminGroupRow
                       key={family.id}
                       family={family}
