@@ -20,6 +20,10 @@ create table families (
 );
 
 -- Members table
+-- social_media_1/2 are required from the self-serve Join form (enforced
+-- client-side) but left nullable here so admins can add a vetted member
+-- directly (see Account.jsx's "Add a member directly") without needing
+-- socials the admin may not have on hand.
 create table members (
   id uuid primary key default gen_random_uuid(),
   family_id uuid references families(id),
@@ -27,8 +31,8 @@ create table members (
   name text not null,
   phone text not null,
   email text,
-  social_media_1 text not null,
-  social_media_2 text not null,
+  social_media_1 text,
+  social_media_2 text,
   payment_confirmed boolean default false,
   joined_at timestamp default now()
 );
