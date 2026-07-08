@@ -60,14 +60,18 @@ create policy "families_delete_own"
 
 -- ── members ─────────────────────────────────────────────────────────────
 -- A member's PII (phone, email, social handles) is visible only to:
---  - the member themselves, and
---  - the host of the family they joined (so the host can verify/contact them).
+--  - the member themselves,
+--  - the host of the family they joined (so the host can verify/contact them),
+--  - and the two admin accounts below (see families_update_own above and
+--    src/lib/adminAccess.js), so admin support/moderation can see every
+--    group's member list, not just families they personally host.
 drop policy if exists "members_select_own_or_host" on members;
 create policy "members_select_own_or_host"
   on members for select
   to authenticated
   using (
     user_id = auth.uid()
+    or auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
     or exists (
       select 1 from families f
       where f.id = members.family_id
