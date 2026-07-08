@@ -6,7 +6,7 @@ export default function FAQ() {
   const faqs = [
     {
       q: "Is joining or hosting free?",
-      a: "ShareIt charges a small one-time platform fee (from KSh 20) when you host or join a group, covering server costs, host/member verification, and support — plans range from single-use passes to a KSh 200 unlimited yearly plan. This is separate from the subscription cost itself, which members pay directly to their host over M-Pesa, outside of ShareIt.",
+      a: "ShareIt charges a small one-time platform fee (from KSh 29) when you host or join a group, covering server costs, host/member verification, and support — plans range from single-use passes to a KSh 200 unlimited yearly plan. This is separate from the subscription cost itself, which members pay directly to their host over M-Pesa, outside of ShareIt.",
     },
     {
       q: "Is my payment safe?",
@@ -38,7 +38,7 @@ export default function FAQ() {
     },
     {
       q: "How do I join a group?",
-      a: '1. Browse available groups. 2. Click "Join Group" and enter your name, phone, email, and two social media contacts. 3. Pick a platform plan (from KSh 20) to confirm your spot. 4. Get added to the host\'s WhatsApp group.',
+      a: '1. Browse available groups. 2. Click "Join Group" and enter your name, phone, email, and two social media contacts. 3. Pick a platform plan (from KSh 39) to confirm your spot. 4. Get added to the host\'s WhatsApp group.',
     },
   ];
 

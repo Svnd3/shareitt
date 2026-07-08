@@ -953,7 +953,7 @@ export default function Home({ session, authLoading }) {
                   payment details.
                 </li>
                 <li>
-                  ShareIt's platform fee (from KSh 20) is separate from the
+                  ShareIt's platform fee (from KSh 29) is separate from the
                   subscription cost itself, which is paid by M-Pesa directly
                   to the host.
                 </li>

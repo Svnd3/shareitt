@@ -15,7 +15,7 @@ export default function HowItWorks() {
       number: 2,
       title: "Pick a plan",
       description:
-        "Submit your details, then choose a small platform plan (from KSh 20) to confirm your spot",
+        "Submit your details, then choose a small platform plan (from KSh 39) to confirm your spot",
       icon: "📝",
     },
     {
