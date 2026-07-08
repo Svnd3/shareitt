@@ -9,6 +9,10 @@ import {
   fetchAllFamilies,
   fetchMembersByFamilyIds,
 } from "../lib/familyData";
+import {
+  sendHostNewMemberEmail,
+  sendAdminNewMemberEmail,
+} from "../lib/sendEmail";
 import { useToast } from "../components/ToastProvider";
 import Header from "../components/Header";
 import SeoHead from "../components/SeoHead";
@@ -66,7 +70,109 @@ function FilterChips({ label, options, value, onChange }) {
   );
 }
 
-function AdminGroupRow({ family, members, expanded, onToggle }) {
+function AddMemberForm({ family, onAdd }) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [social1, setSocial1] = useState("");
+  const [social2, setSocial2] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const slotsLeft = family.total_slots - family.filled_slots;
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+
+    if (!name.trim() || !phone.trim()) {
+      setError("Name and phone are required.");
+      return;
+    }
+    if (slotsLeft <= 0) {
+      setError("This group is already full.");
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await onAdd({
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      social1: social1.trim(),
+      social2: social2.trim(),
+    });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      setError(result.error || "Unable to add this member. Please try again.");
+      return;
+    }
+
+    setName("");
+    setPhone("");
+    setEmail("");
+    setSocial1("");
+    setSocial2("");
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="mt-4 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Add a member directly
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Full name"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+        <input
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
+          placeholder="Phone number"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+        <input
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="Email (optional)"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+        <input
+          value={social1}
+          onChange={(event) => setSocial1(event.target.value)}
+          placeholder="Social media 1 (optional)"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+        <input
+          value={social2}
+          onChange={(event) => setSocial2(event.target.value)}
+          placeholder="Social media 2 (optional)"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+        />
+      </div>
+      {error && <p className="text-xs text-rose-600">{error}</p>}
+      <button
+        type="submit"
+        disabled={submitting || slotsLeft <= 0}
+        className="rounded-full bg-[#1A7A3C] px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+      >
+        {submitting
+          ? "Adding…"
+          : slotsLeft <= 0
+            ? "Group is full"
+            : "Add member"}
+      </button>
+    </form>
+  );
+}
+
+function AdminGroupRow({ family, members, expanded, onToggle, onAddMember }) {
   const slotsLeft = family.total_slots - family.filled_slots;
   const isSeed = !family.created_by;
 
@@ -138,6 +244,10 @@ function AdminGroupRow({ family, members, expanded, onToggle }) {
               </div>
             ))
           )}
+          <AddMemberForm
+            family={family}
+            onAdd={(details) => onAddMember(family, details)}
+          />
         </div>
       )}
     </div>
@@ -252,6 +362,64 @@ export default function Account({ session, authLoading }) {
 
     setJoinedFamilies((current) => current.filter((f) => f.id !== family.id));
     toast.showToast("You have left the group.", "success");
+  };
+
+  const handleAdminAddMember = async (family, details) => {
+    const { data: inserted, error: insertError } = await supabase
+      .from("members")
+      .insert({
+        family_id: family.id,
+        user_id: null,
+        name: details.name,
+        phone: details.phone,
+        email: details.email || null,
+        social_media_1: details.social1 || null,
+        social_media_2: details.social2 || null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Admin add member error:", insertError);
+      return { ok: false, error: insertError.message };
+    }
+
+    const { error: incrementError } = await supabase.rpc(
+      "increment_family_slot",
+      { p_family_id: family.id },
+    );
+    if (incrementError) {
+      console.error("Increment family slot error:", incrementError);
+    }
+
+    setAllGroups((current) =>
+      current.map((f) =>
+        f.id === family.id ? { ...f, filled_slots: f.filled_slots + 1 } : f,
+      ),
+    );
+    setAllGroupsMembers((current) => ({
+      ...current,
+      [family.id]: [...(current[family.id] || []), inserted],
+    }));
+
+    sendHostNewMemberEmail({
+      familyId: family.id,
+      memberName: details.name,
+    }).catch((error) => {
+      console.error("Host new member email failed:", error);
+    });
+    sendAdminNewMemberEmail({
+      memberName: details.name,
+      family,
+    }).catch((error) => {
+      console.error("Admin new member email failed:", error);
+    });
+
+    toast.showToast(
+      `${details.name} added — host and admin notified by email.`,
+      "success",
+    );
+    return { ok: true };
   };
 
   const handleSignOut = async () => {
@@ -538,6 +706,7 @@ export default function Account({ session, authLoading }) {
                           current === family.id ? null : family.id,
                         )
                       }
+                      onAddMember={handleAdminAddMember}
                     />
                   ))}
                 </div>

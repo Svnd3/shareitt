@@ -79,12 +79,19 @@ create policy "members_select_own_or_host"
     )
   );
 
--- Signed-in users can only create a membership row for themselves.
+-- Signed-in users can only create a membership row for themselves. Admins
+-- (see families_update_own above) can additionally add a member on someone
+-- else's behalf with no ShareIt account of their own — e.g. resolving a
+-- support case where a host asks to add a member directly. Those rows get
+-- user_id = null, same as the launch-time seed members.
 drop policy if exists "members_insert_own" on members;
 create policy "members_insert_own"
   on members for insert
   to authenticated
-  with check (user_id = auth.uid());
+  with check (
+    user_id = auth.uid()
+    or auth.email() in ('hezronsande2@gmail.com', 'keninnofficial@gmail.com')
+  );
 
 -- Only the host of the family can remove a member.
 drop policy if exists "members_delete_host" on members;
