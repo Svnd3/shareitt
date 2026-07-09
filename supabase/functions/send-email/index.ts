@@ -53,6 +53,12 @@ async function buildEmail(type: string, payload: Record<string, unknown>) {
           </ul>
           <p>Share your WhatsApp link with members so they can join quickly.</p>
           <p>${whatsapp_group_link ? `Group link: <a href="${String(whatsapp_group_link)}">${String(whatsapp_group_link)}</a>` : "No WhatsApp link was provided."}</p>
+          <p><strong>A few guidelines before members start joining:</strong></p>
+          <ul>
+            <li>Do not overcharge for the service — price per slot should reflect a fair split of the actual subscription cost.</li>
+            <li>You, as the host, are responsible for ensuring members pay up.</li>
+            <li>If you already have members of your own and only want a few more through ShareIt, adjust your total slots accordingly — otherwise people will see the group as having open slots and try to join when it's actually full.</li>
+          </ul>
           <p>Thank you for hosting with ShareIt.</p>
         `,
       };
