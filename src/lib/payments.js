@@ -2,7 +2,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from "./supabaseClient";
 import { isAdminEmail } from "./adminAccess";
 
 // Flip to true to re-enable the tiered payment paywall for hosting/joining.
-export const PAYMENTS_ENABLED = true;
+export const PAYMENTS_ENABLED = false;
 
 const VERIFY_PAYMENT_URL = `${supabaseUrl}/functions/v1/verify-payment`;
 
