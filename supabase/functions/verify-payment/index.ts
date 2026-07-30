@@ -22,14 +22,24 @@ const TIERS: Record<
     isUnlimited: boolean;
   }
 > = {
-  join: { amount: 39, hostSlotsTotal: 0, joinSlotsTotal: 1, isUnlimited: false },
-  host: { amount: 29, hostSlotsTotal: 1, joinSlotsTotal: 0, isUnlimited: false },
+  join: { amount: 80, hostSlotsTotal: 0, joinSlotsTotal: 1, isUnlimited: false },
+  host: { amount: 90, hostSlotsTotal: 1, joinSlotsTotal: 0, isUnlimited: false },
   combo: { amount: 49, hostSlotsTotal: 1, joinSlotsTotal: 1, isUnlimited: false },
   power: { amount: 119, hostSlotsTotal: 4, joinSlotsTotal: 3, isUnlimited: false },
   unlimited: { amount: 249, hostSlotsTotal: 0, joinSlotsTotal: 0, isUnlimited: true },
 };
 
 const UNLIMITED_DURATION_MS = 90 * 24 * 60 * 60 * 1000;
+
+// Marketplace shop tiers — kept in sync with SHOP_PRICING_TIERS in
+// src/lib/payments.js. Handled separately from TIERS above because a shop
+// charge doesn't write to payment_grants at all — it creates/renews a shops
+// row via create_shop_paid()/extend_shop_subscription() instead (see
+// supabase_rls_policies.sql).
+const SHOP_TIERS: Record<string, { amount: number }> = {
+  shop_setup: { amount: 449 },
+  shop_subscription: { amount: 299 },
+};
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -44,15 +54,23 @@ serve(async (req) => {
   }
 
   try {
-    const { reference, tier } = await req.json();
+    const { reference, tier, shop, shopId } = await req.json();
 
     if (!reference || typeof reference !== "string") {
       return jsonResponse({ error: "Missing payment reference." }, 400);
     }
 
     const tierConfig = TIERS[tier];
-    if (!tierConfig) {
+    const shopTierConfig = SHOP_TIERS[tier];
+    if (!tierConfig && !shopTierConfig) {
       return jsonResponse({ error: "Unknown tier." }, 400);
+    }
+
+    if (tier === "shop_setup" && (!shop?.category || !shop?.shopName || !shop?.ownerName || !shop?.ownerPhone || !shop?.ownerEmail)) {
+      return jsonResponse({ error: "Missing shop details." }, 400);
+    }
+    if (tier === "shop_subscription" && !shopId) {
+      return jsonResponse({ error: "Missing shopId." }, 400);
     }
 
     const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
@@ -97,7 +115,7 @@ serve(async (req) => {
       return jsonResponse({ error: "Payment could not be verified." }, 402);
     }
 
-    const expectedAmount = tierConfig.amount * 100;
+    const expectedAmount = (tierConfig?.amount ?? shopTierConfig?.amount ?? 0) * 100;
     const paidSuccessfully =
       verifyBody?.status === true &&
       verifyBody?.data?.status === "success" &&
@@ -122,17 +140,64 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string,
     );
 
+    if (tier === "shop_setup") {
+      // paystack_reference is unique on shop_contacts (see
+      // supabase_rls_policies.sql) — same replay protection payment_grants
+      // gets from its own unique paystack_reference column. A reused
+      // reference fails the insert inside create_shop_paid with a unique
+      // violation instead of silently creating a second shop.
+      const { data: newShop, error: shopError } = await adminClient.rpc("create_shop_paid", {
+        p_owner_id: user.id,
+        p_category: shop.category,
+        p_shop_name: shop.shopName,
+        p_owner_name: shop.ownerName,
+        p_owner_phone: shop.ownerPhone,
+        p_owner_email: shop.ownerEmail,
+        p_paystack_reference: reference,
+      });
+
+      if (shopError) {
+        return jsonResponse({ error: shopError.message }, 409);
+      }
+
+      return jsonResponse({ shop: newShop });
+    }
+
+    if (tier === "shop_subscription") {
+      const { data: ownedShop, error: ownershipError } = await adminClient
+        .from("shops")
+        .select("id")
+        .eq("id", shopId)
+        .eq("owner_id", user.id)
+        .maybeSingle();
+
+      if (ownershipError || !ownedShop) {
+        return jsonResponse({ error: "Shop not found." }, 404);
+      }
+
+      const { data: newExpiry, error: extendError } = await adminClient.rpc(
+        "extend_shop_subscription",
+        { p_shop_id: shopId, p_paystack_reference: reference },
+      );
+
+      if (extendError) {
+        return jsonResponse({ error: extendError.message }, 409);
+      }
+
+      return jsonResponse({ subscriptionActiveUntil: newExpiry });
+    }
+
     const { data: grant, error: insertError } = await adminClient
       .from("payment_grants")
       .insert({
         user_id: user.id,
         tier,
-        amount: tierConfig.amount,
+        amount: tierConfig!.amount,
         paystack_reference: reference,
-        host_slots_total: tierConfig.hostSlotsTotal,
-        join_slots_total: tierConfig.joinSlotsTotal,
-        is_unlimited: tierConfig.isUnlimited,
-        expires_at: tierConfig.isUnlimited
+        host_slots_total: tierConfig!.hostSlotsTotal,
+        join_slots_total: tierConfig!.joinSlotsTotal,
+        is_unlimited: tierConfig!.isUnlimited,
+        expires_at: tierConfig!.isUnlimited
           ? new Date(Date.now() + UNLIMITED_DURATION_MS).toISOString()
           : null,
       })
