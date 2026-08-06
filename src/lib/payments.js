@@ -103,6 +103,15 @@ export function generatePaymentReference(tierId) {
   return `SHAREIT_${tierId.toUpperCase()}_${Date.now()}`;
 }
 
+export async function recordPaymentAttempt({ reference, tier, userId }) {
+  const { error } = await supabase.from("payment_attempts").insert({
+    reference,
+    tier,
+    user_id: userId,
+  });
+  if (error) throw new Error(error.message || "Unable to start payment.");
+}
+
 export async function verifyPayment({ reference, tier, accessToken }) {
   const response = await fetch(VERIFY_PAYMENT_URL, {
     method: "POST",
@@ -122,6 +131,17 @@ export async function verifyPayment({ reference, tier, accessToken }) {
   }
 
   return body.grant;
+}
+
+export async function recoverPayment({ reference, accessToken }) {
+  const normalizedReference = reference.trim().toUpperCase();
+  const match = normalizedReference.match(/^SHAREIT_(JOIN|HOST|COMBO|POWER|UNLIMITED)_\d+$/);
+  if (!match) throw new Error("Enter a valid ShareIt payment reference.");
+  return verifyPayment({
+    reference: normalizedReference,
+    tier: match[1].toLowerCase(),
+    accessToken,
+  });
 }
 
 // Shop setup (KSh 449, one-time — only charged once the first-40-free tier

@@ -730,6 +730,7 @@ export default function Host() {
         <TierPaywall
           action="host"
           userEmail={session?.user?.email}
+          userId={session?.user?.id}
           accessToken={session?.access_token}
           onSuccess={handlePaywallSuccess}
           onClose={() => setShowPaywall(false)}

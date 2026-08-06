@@ -1,5 +1,11 @@
 import { useRef, useState } from "react";
-import { PRICING_TIERS, generatePaymentReference, verifyPayment } from "../lib/payments";
+import {
+  PRICING_TIERS,
+  generatePaymentReference,
+  recordPaymentAttempt,
+  recoverPayment,
+  verifyPayment,
+} from "../lib/payments";
 
 const ORDER_BY_ACTION = {
   host: ["host", "combo", "power", "unlimited", "join"],
@@ -9,11 +15,13 @@ const ORDER_BY_ACTION = {
 // Mounted by the parent only while the paywall should be visible (e.g.
 // `{showPaywall && <TierPaywall ... />}`) — that way each appearance starts
 // from fresh state instead of needing an effect to reset it on reopen.
-export default function TierPaywall({ action, userEmail, accessToken, onSuccess, onClose }) {
+export default function TierPaywall({ action, userEmail, userId, accessToken, onSuccess, onClose }) {
   const [selectedTierId, setSelectedTierId] = useState(null);
   const [stage, setStage] = useState("idle"); // idle | confirming | error
   const [errorMessage, setErrorMessage] = useState("");
   const [whyOpen, setWhyOpen] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryReference, setRecoveryReference] = useState("");
   const confirmingRef = useRef(false);
 
   const order = ORDER_BY_ACTION[action] || PRICING_TIERS.map((tier) => tier.id);
@@ -21,7 +29,7 @@ export default function TierPaywall({ action, userEmail, accessToken, onSuccess,
     .map((id) => PRICING_TIERS.find((tier) => tier.id === id))
     .filter(Boolean);
 
-  const handlePickTier = (tier) => {
+  const handlePickTier = async (tier) => {
     if (stage === "confirming") return;
     setSelectedTierId(tier.id);
     setErrorMessage("");
@@ -33,6 +41,14 @@ export default function TierPaywall({ action, userEmail, accessToken, onSuccess,
 
     const reference = generatePaymentReference(tier.id);
 
+    try {
+      await recordPaymentAttempt({ reference, tier: tier.id, userId });
+    } catch (error) {
+      setStage("error");
+      setErrorMessage(error.message || "Unable to start payment.");
+      return;
+    }
+
     const handler = window.PaystackPop.setup({
       key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
       email: userEmail || "member@shareitt.xyz",
@@ -41,6 +57,7 @@ export default function TierPaywall({ action, userEmail, accessToken, onSuccess,
       channels: ["mobile_money"],
       ref: reference,
       label: `ShareIt — ${tier.name}`,
+      metadata: { user_id: userId, tier: tier.id },
       callback: function (response) {
         confirmingRef.current = true;
         setStage("confirming");
@@ -66,6 +83,19 @@ export default function TierPaywall({ action, userEmail, accessToken, onSuccess,
     });
 
     handler.openIframe();
+  };
+
+  const handleRecover = async () => {
+    setStage("confirming");
+    setErrorMessage("");
+    try {
+      const grant = await recoverPayment({ reference: recoveryReference, accessToken });
+      setStage("idle");
+      onSuccess(grant);
+    } catch (error) {
+      setStage("error");
+      setErrorMessage(error.message || "We couldn't recover this payment.");
+    }
   };
 
   return (
@@ -119,6 +149,34 @@ export default function TierPaywall({ action, userEmail, accessToken, onSuccess,
               </div>
             </button>
           ))}
+        </div>
+
+        <div className="mt-5 border-t border-slate-200 pt-4">
+          <button
+            type="button"
+            onClick={() => setRecoveryOpen((open) => !open)}
+            className="text-sm font-semibold text-[#1A7A3C]"
+          >
+            Already paid but didn't get access?
+          </button>
+          {recoveryOpen && (
+            <div className="mt-3 space-y-2">
+              <input
+                value={recoveryReference}
+                onChange={(event) => setRecoveryReference(event.target.value)}
+                placeholder="SHAREIT_JOIN_..."
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleRecover}
+                disabled={!recoveryReference.trim() || stage === "confirming"}
+                className="w-full rounded-xl bg-[#1A7A3C] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {stage === "confirming" ? "Checking payment…" : "Recover payment"}
+              </button>
+            </div>
+          )}
         </div>
 
         {stage === "confirming" && (

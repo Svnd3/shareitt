@@ -140,6 +140,21 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string,
     );
 
+    if (tierConfig) {
+      const { data: existingGrant } = await adminClient
+        .from("payment_grants")
+        .select("*")
+        .eq("paystack_reference", reference)
+        .maybeSingle();
+
+      if (existingGrant) {
+        if (existingGrant.user_id !== user.id || existingGrant.tier !== tier) {
+          return jsonResponse({ error: "This payment reference has already been used." }, 409);
+        }
+        return jsonResponse({ grant: existingGrant, recovered: true });
+      }
+    }
+
     if (tier === "shop_setup") {
       // paystack_reference is unique on shop_contacts (see
       // supabase_rls_policies.sql) — same replay protection payment_grants
@@ -209,6 +224,12 @@ serve(async (req) => {
       // already redeemed for a grant — not a new payment to honor again.
       return jsonResponse({ error: insertError.message }, 409);
     }
+
+
+    await adminClient
+      .from("payment_attempts")
+      .update({ status: "verified", verified_at: new Date().toISOString() })
+      .eq("reference", reference);
 
     return jsonResponse({ grant });
   } catch (error) {
